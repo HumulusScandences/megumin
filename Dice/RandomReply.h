@@ -7,7 +7,7 @@
 
 namespace RandomReply
 {
-	extern std::map<std::string, std::vector<std::string>> mRanDeck;
+	extern const std::map<std::string, std::vector<std::string>> mRanDeck;
 	extern std::string getReply(std::string RanMsgtype);
 };
 #endif /*Random_Reply*/

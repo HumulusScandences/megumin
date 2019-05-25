@@ -354,6 +354,7 @@ std::string getName(long long QQ, long long GroupID = 0)
 }
 
 map<long long, int> DefaultDice;
+const long long master = 2918762900;
 map<long long, string> WelcomeMsg;
 set<long long> DisabledGroup;
 set<long long> DisabledDiscuss;
@@ -437,12 +438,35 @@ bool ClistFounder(SourceType d, string name)
 	}
 	return 0;
 }
+string DBgetter(int a)
+{
+	if (a <= 64)return "-2";
+	else if (65 <= a&&a <= 84)return "-1";
+	else if (85 <= a&&a <= 124)return"0";
+	else if (125 <= a&&a <= 164)return"1d4";
+	else 
+	{
+		string strRE = to_string((a - 164) / 80) + "d6";
+		return strRE;
+	}
+}
+string getDetail(SourceType a, string b)
+{
+	bool checker = ClistFounder(a, b);
+	string strReturn;
+	if (checker&& F2Fsk->second.count("体型")&&F2Fsk->second.count("理智") && F2Fsk->second.count("意志") && F2Fsk->second.count("体质") && F2Fsk->second.count("力量"))
+	{
+		strReturn += "\nsan:"+to_string(F2Fsk->second["理智"]) + "/" + to_string(F2Fsk->second["意志"])+"\nDB:"+DBgetter(F2Fsk->second["体型"] + F2Fsk->second["力量"]) + "\nhp:" +to_string((F2Fsk->second["体质"] + F2Fsk->second["体型"])/10);
+	}
+	if(strReturn.empty()) return "必须同时录入有体型、理智、意志、体质、力量才可以显示人物卡状态";
+	else return strReturn;
+}
 //简易计时器
 void ConsoleTimer()
 {
 	while (Enabled)
 	{
-		AddMsgToQueue(Dice::DiceMsg("开始计时，10小时后将对数据进行保存", 0LL, 2918762900, Dice::MsgType::Private));
+		AddMsgToQueue(Dice::DiceMsg("开始计时，10小时后将对数据进行保存", 0LL, master, Dice::MsgType::Private));
 		Sleep(36000000);
 		GetLocalTime(&stNow);
 			ofstream ofstreamDisabledGroup(strFileLoc + "DisabledGroup.RDconf", ios::out | ios::trunc);
@@ -588,7 +612,7 @@ void ConsoleTimer()
 				ofstreamWelcomeMsg << it->first << " " << it->second << std::endl;
 			}
 			ofstreamWelcomeMsg.close();
-			AddMsgToQueue(Dice::DiceMsg("自动保存成功啦！", 0LL, 2918762900, Dice::MsgType::Private));
+			AddMsgToQueue(Dice::DiceMsg("自动保存成功啦！", 0LL, master, Dice::MsgType::Private));
 	}
 }
 namespace Dice
@@ -843,6 +867,12 @@ namespace Dice
 		string Cname = "default";
 		if (Usingname.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
 		Cname = Usingname[SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)];
+		if (Cname.empty())
+		{
+			Cname = "default";
+			dice_msg.Reply("由于未知错误，你的当前人物卡名称为空，继续录入可能会导致其他人的数据丢失，现以将你的人物卡名称改为\"default\"请尽快联系master以修复可能的bug~~");
+		}
+		//保险措施
 		init(dice_msg.msg);
 		while (isspace(static_cast<unsigned char>(dice_msg.msg[0])))
 			dice_msg.msg.erase(dice_msg.msg.begin());
@@ -1002,7 +1032,7 @@ namespace Dice
 				}
 			}
 		}
-		else if (strLowerMessage.substr(intMsgCnt, 7) == "save"&& dice_msg.qq_id ==2918762900)
+		else if (strLowerMessage.substr(intMsgCnt, 7) == "save"&& dice_msg.qq_id ==master)
 		{
 		CString path1 = strFileLoc.c_str();
 		CString path2 = "/temfile";
@@ -1156,7 +1186,7 @@ namespace Dice
 		ofstreamWelcomeMsg.close();
 		dice_msg.Reply("手动保存成功啦！");
 		}
-		else if (strLowerMessage.substr(intMsgCnt, 7) == "load" && dice_msg.qq_id == 2918762900 && dice_msg.msg_type == Dice::MsgType::Private)
+		else if (strLowerMessage.substr(intMsgCnt, 7) == "load" && dice_msg.qq_id == master && dice_msg.msg_type == Dice::MsgType::Private)
 		{
 		dice_msg.Reply("正在读取数据中，请稍候....");
 		ifstream ifstreamCharacterProp(strFileLoc +"//temfile//" + "CharacterProp.RDconf");
@@ -1621,7 +1651,8 @@ namespace Dice
 	{
 		Duellist.insert(pair<SourceType, int>(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), score));
 	}
-	strReply += "\n" + RandomReply::mRanDeck["Duelresult"][score + 45];
+	map<std::string, std::vector<std::string>>::const_iterator cit = RandomReply::mRanDeck.find("Duelresult");
+	strReply += cit->second[score + 49];
 	dice_msg.Reply(strReply);
 	return;
 	}
@@ -1845,7 +1876,7 @@ namespace Dice
 			}
 			else if (SkillDefaultVal.count(strSkillName))
 			{
-				dice_msg.Reply(format(GlobalMsg["strProp"], { strNickName, strSkillName, to_string(F2Fsk->second[strSkillName]) }));
+				dice_msg.Reply(format(GlobalMsg["strProp"], { strNickName, strSkillName, to_string(SkillDefaultVal[strSkillName]) }));
 			}
 			else
 			{
@@ -1880,6 +1911,7 @@ namespace Dice
 				boolError = true;
 				break;
 			}
+			if (SkillDefaultVal[strSkillName] != stoi(strSkillVal))
 			CharacterProp[SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)][strSkillName] = stoi(strSkillVal);
 			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])) || strLowerMessage[intMsgCnt] == '|')intMsgCnt++;
 		}
@@ -1951,6 +1983,7 @@ namespace Dice
 				dice_msg.Reply(GlobalMsg["strPropErr"]);
 				return;
 			}
+			if (SkillDefaultVal[strSkillName] != stoi(strSkillVal))
 			F2Fsk->second[strSkillName] = stoi(strSkillVal);
 			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])) || strLowerMessage[intMsgCnt] == '|')intMsgCnt++;
 		}
@@ -1970,7 +2003,13 @@ namespace Dice
 	finder1 = Clist.find(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
 	if (strLowerMessage.substr(intMsgCnt, 2) == "me")
 	{
-		strReply += "你当前使用的人物卡是：\n" + Cname + "\n";
+		strReply += "你当前使用的人物卡是:\n" + Cname;
+		bool found = 0;
+		if (Cname != "default")found = ClistFounder(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
+		if (found)
+		{
+			strReply += "\n人物卡状态："+getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname)+"\n";
+		}
 		if (Clist.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
 		{
 			strReply += "你的调查员有———";
@@ -1985,7 +2024,7 @@ namespace Dice
 		}
 		else if (Clist.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) == 0)
 		{
-			strReply += "你的人物卡列表是空哒！";
+			strReply += "\n你的人物卡列表是空哒！";
 			dice_msg.Reply(strReply);
 		}
 	}
@@ -2897,8 +2936,13 @@ namespace Dice
 	}
 	else if (strCurrentValue.empty())
 	{
-		if (found && F2Fsk->second.count(strSkillName))intCurrentVal = F2Fsk->second[strSkillName];
-		else if (found == 0 && SkillDefaultVal.count(strSkillName))
+		if(found == 0)
+		{
+			dice_msg.Reply(GlobalMsg["strCEmpty"]);
+			return;
+		}
+		if (F2Fsk->second.count(strSkillName))intCurrentVal = F2Fsk->second[strSkillName];
+		else if (SkillDefaultVal.count(strSkillName))
 		{
 			intCurrentVal = SkillDefaultVal[strSkillName];
 		}
@@ -2938,22 +2982,10 @@ namespace Dice
 	intMsgCnt += 2;
 	const auto range = Clist.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
 	auto ENfinder1 = range.first;
-	map<string, PropType>::iterator F2Fsk;
 	bool found = 0;
 	if (Cname != "default")
 	{
-		map<string, PropType>::iterator	ENfinder2 = ENfinder1->second.begin();
-		for (; ENfinder1 != range.second;)
-		{
-			ENfinder2 = ENfinder1->second.begin();
-			if (ENfinder2->first == Cname)
-			{
-				F2Fsk = ENfinder2;
-				found = 1;
-				break;
-			}
-			if (++ENfinder1 == Clist.end())break;
-		}
+	found = ClistFounder(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
 	}
 	while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
 		intMsgCnt++;
@@ -5063,7 +5095,7 @@ namespace Dice
 	}
 	/*void EventHandler::HandleAddGroupEvent()
 	{
-		AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=2918762900]收到来自群", 812839433, 2918762900, Dice::MsgType::Group));
+		AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]收到来自群", 812839433, master, Dice::MsgType::Group));
 		return;
 	}*/
 }
