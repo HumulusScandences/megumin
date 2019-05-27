@@ -99,6 +99,7 @@ std::map<const std::string, std::string> GlobalMsg
 	{"strValueErr", "你输错了，傻瓜~！"},
 	{"strInputErr", "命令或掷骰表达式输入错误!"},
 	{"strUnknownErr", "发生了未知错误!"},
+	{"strTeamInsertErr", "批量插入格式错误，使用@每个成员的方式插入"},
 	{"strUnableToGetErrorMsg", "无法获取错误信息!"},
 	{"strDiceTooBigErr", "骰娘被你扔出的骰子淹没了"},
 	{"strRequestRetCodeErr", "访问服务器时出现错误! HTTP状态码: {0}"},

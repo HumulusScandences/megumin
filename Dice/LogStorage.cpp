@@ -224,7 +224,7 @@ bool LogStorage::haveAuthority(long long QQ, long long GroupID)
 {
 	if (LogRecorder.count(GroupID))
 	{
-		return QQ == LogRecorder[GroupID] || QQ == 450609203;
+		return QQ == LogRecorder[GroupID] || QQ == 2918762900;
 	}
 	else
 	{

@@ -46,14 +46,7 @@
 #include <cstdlib>
 #include <functional>
 
-/*
-TODO:
-1. en可变成长检定
-2. st多人物卡
-3. st人物卡绑定
-4. st属性展示，全属性展示以及排序
-5. help优化
-*/
+
 
 using namespace std;
 using namespace CQ;
@@ -405,9 +398,11 @@ using PropType = map<string, int>;
 using PropClueType = map<string, string>;
 using TypeNumber = pair<long long, Dice::MsgType>;
 using Listcon = map<string, PropType>;
+using TeamSave =map<SourceType,string>;
 map<SourceType, PropType> CharacterProp;
 map<ClueType, PropClueType> ClueProp;
 map<string, PropType>::iterator F2Fsk;
+multimap<SourceType,long long>TeamSaver;
 multimap<SourceType, Listcon>Clist;
 map<SourceType, long long>duelT;
 map<SourceType, TypeNumber>KpGroup;
@@ -452,16 +447,35 @@ string DBgetter(int a)
 }
 string getDetail(SourceType a, string b)
 {
-	bool checker = ClistFounder(a, b);
 	string strReturn;
-	if (checker&& F2Fsk->second.count("体型")&&F2Fsk->second.count("理智") && F2Fsk->second.count("意志") && F2Fsk->second.count("体质") && F2Fsk->second.count("力量"))
+	if (b == "default")
 	{
-		strReturn += "\nsan:"+to_string(F2Fsk->second["理智"]) + "/" + to_string(F2Fsk->second["意志"])+"\nDB:"+DBgetter(F2Fsk->second["体型"] + F2Fsk->second["力量"]) + "\nhp:" +to_string((F2Fsk->second["体质"] + F2Fsk->second["体型"])/10);
+		if (CharacterProp[a].count("体型") && CharacterProp[a].count("理智") && CharacterProp[a].count("意志") && CharacterProp[a].count("体质") && CharacterProp[a].count("力量"))
+		{
+			strReturn += "\nsan:" + to_string(CharacterProp[a]["理智"]) + "/" + to_string(CharacterProp[a]["意志"]) + "\nDB:" + DBgetter(CharacterProp[a]["体型"] + CharacterProp[a]["力量"]) + "  hp:" + to_string(int(ceil((CharacterProp[a]["体质"] + CharacterProp[a]["体型"]) / 10)));
+		}
 	}
-	if(strReturn.empty()) return "必须同时录入有体型、理智、意志、体质、力量才可以显示人物卡状态";
+	else
+	{
+		bool checker = ClistFounder(a, b);
+		if (checker && F2Fsk->second.count("体型") && F2Fsk->second.count("理智") && F2Fsk->second.count("意志") && F2Fsk->second.count("体质") && F2Fsk->second.count("力量"))
+		{
+			strReturn += "san:" + to_string(F2Fsk->second["理智"]) + "/" + to_string(F2Fsk->second["意志"]) + "  \nDB:" + DBgetter(F2Fsk->second["体型"] + F2Fsk->second["力量"]) + "hp:" + to_string(int(ceil((F2Fsk->second["体质"] + F2Fsk->second["体型"]) / 10)));
+		}
+	}
+	if (strReturn.empty()) return "人物卡数据不足，无法显示详情";
 	else return strReturn;
 }
 //简易计时器
+string getUname(SourceType a)
+{
+	if (Usingname.count(a))return Usingname[a];
+	else
+	{
+		string b = getName(a.QQ) + "(default)";
+		return b;
+	}
+}
 void ConsoleTimer()
 {
 	while (Enabled)
@@ -536,6 +550,7 @@ void ConsoleTimer()
 			ofstream ofstreamUsingname(strFileLoc + "Usingname.RDconf", ios::out | ios::trunc);
 			for (auto it = Usingname.begin(); it != Usingname.end(); ++it)
 			{
+				if(!it->second.empty())
 				ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
 			}
 			ofstreamUsingname.close();
@@ -1108,6 +1123,7 @@ namespace Dice
 		ofstream ofstreamUsingname(strFileLoc +"//temfile//" + "Usingname.RDconf", ios::out | ios::trunc);
 		for (auto it = Usingname.begin(); it != Usingname.end(); ++it)
 		{
+			if (!it->second.empty())
 			ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
 		}
 		ofstreamUsingname.close();
@@ -2008,11 +2024,11 @@ namespace Dice
 		if (Cname != "default")found = ClistFounder(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
 		if (found)
 		{
-			strReply += "\n人物卡状态："+getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname)+"\n";
+			strReply += "\n人物卡状态\n"+getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
 		}
 		if (Clist.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
 		{
-			strReply += "你的调查员有———";
+			strReply += "\n你的调查员有———";
 			const auto range = Clist.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
 			for (auto it = range.first; it != range.second; ++it)
 			{
@@ -2348,6 +2364,122 @@ namespace Dice
 			ilInitList->insert(dice_msg.group_id, initdice.intTotal, strname);
 			const string strReply = strname + "的先攻骰点：" + strinit + '=' + to_string(initdice.intTotal);
 			dice_msg.Reply(strReply);
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "team")
+		{
+		intMsgCnt += 4;
+		string strReply;
+		while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
+		if (strLowerMessage.substr(intMsgCnt, 3) == "add")
+		{
+			intMsgCnt += 3;
+			strReply += "新的成员已经添加~（棒读）";
+			while (intMsgCnt != strLowerMessage.length())
+			{
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				{
+					intMsgCnt += 10;
+					string strNumber;
+					long long PLnumber;
+
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strNumber += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					PLnumber = stoll(strNumber);
+					TeamSaver.insert({ SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), PLnumber });
+					intMsgCnt += 1;
+					strReply += "\n调查员：" + getUname(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id));
+				}
+				else
+				{
+					dice_msg.Reply(GlobalMsg["strTeamInsertErr"]);
+					return;
+				}
+			}
+			dice_msg.Reply(strReply);
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 3) == "era")
+		{
+			intMsgCnt += 3;
+			strReply += "好，我帮你从队伍中划除:";
+			while (intMsgCnt != strLowerMessage.length())
+			{
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				{
+					intMsgCnt += 10;
+					string strNumber;
+					long long PLnumber;
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strNumber += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					PLnumber = stoll(strNumber);
+					const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+					multimap<SourceType, long long>::iterator Mfinder = cit.first;
+					for (; Mfinder != cit.second; ++Mfinder)
+					{
+						if (Mfinder->second == PLnumber)Mfinder = TeamSaver.erase(Mfinder);
+					}
+					intMsgCnt += 1;
+					strReply += "\n调查员:" + getUname(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id));
+				}
+				else
+				{
+					TeamSaver.erase(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+					dice_msg.Reply("已经清除所有小组成员");
+					return;
+
+				}
+				dice_msg.Reply(strReply);
+			}
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "call")
+		{
+			intMsgCnt += 4;
+			if (TeamSaver.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id))!=0)
+			{
+				string strNumber;
+				const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+				multimap<SourceType, long long>::iterator Mfinder = cit.first;
+				for (; Mfinder != cit.second;++Mfinder)
+				{
+					strReply += "[CQ:at,qq=" + to_string(Mfinder->second) + "]";
+				}
+			}
+			else
+			{
+				dice_msg.Reply("你的team里没有调查员啦，请仔细确认");
+				return;
+			}
+			dice_msg.Reply(strReply);
+		}
+		else
+		{
+			if (TeamSaver.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
+			{
+				strReply += "以下是你team中的调查员:";
+				string strNumber;
+				const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+				multimap<SourceType, long long>::iterator Mfinder = cit.first;
+				for (; Mfinder != cit.second; ++Mfinder)
+				{
+					if (Usingname.count(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)))
+						strReply += "\n"+ Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)] +":"+getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id), Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)]);
+					else strReply += "\n" + getName(Mfinder->second) + "(default):" +getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id),"default");
+				}
+			}
+			else
+			{
+				dice_msg.Reply("你的team里没有调查员啦，请仔细确认");
+				return;
+			}
+			dice_msg.Reply(strReply);
+		}
 		}
 		else if (strLowerMessage.substr(intMsgCnt, 4) == "init")
 		{
@@ -5016,6 +5148,7 @@ namespace Dice
 		ofstream ofstreamUsingname(strFileLoc + "Usingname.RDconf", ios::out | ios::trunc);
 		for (auto it = Usingname.begin(); it != Usingname.end(); ++it)
 		{
+			if (!it->second.empty())
 			ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
 		}
 		ofstreamUsingname.close();
