@@ -41,8 +41,6 @@
 
 using namespace std;
 using namespace CQ;
-
-
 Dice::EventHandler MainEventHandler;
 
 EVE_Enable(eventEnable)
@@ -50,7 +48,6 @@ EVE_Enable(eventEnable)
 	MainEventHandler.HandleEnableEvent();
 	return 0;
 }
-
 
 EVE_PrivateMsg_EX(eventPrivateMsg)
 {
@@ -62,7 +59,25 @@ EVE_PrivateMsg_EX(eventPrivateMsg)
 
 EVE_GroupMsg_EX(eventGroupMsg)
 {
-	if (eve.isSystem() || eve.isAnonymous()) return;
+	if (eve.isAnonymous())return;
+	if (eve.isSystem() )
+	{
+		if (eve.message.find("被管理员禁言") != string::npos && eve.message.find(to_string(getLoginQQ())) != string::npos)
+		{
+			for (auto member : getGroupMemberList(eve.fromGroup))
+			{
+				if (member.permissions == 3) 
+				{
+					BanListFP.insertList(member.QQID, 4, "因为被禁言拉灰");
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq="+ to_string(std::master) + "]我在群" + getGroupList()[eve.fromGroup] +"["+ to_string(eve.fromGroup) + "]被禁言了！我已经溜回来了，顺便把群主[" + to_string(member.QQID) + "]拉灰了!\n该群的审核操作为：\n" + std::Banreason(0,eve.fromGroup), std::masterGroup, master, Dice::MsgType::Group));
+					break;
+				}
+			}
+			BanListFG.insertList(eve.fromGroup, 4, "因为被禁言拉黑");
+			setGroupLeave(eve.fromGroup, false);
+			return;
+		}
+	}
 	bool block_msg = false;
 	MainEventHandler.HandleMsgEvent(Dice::DiceMsg(std::move(eve.message),eve.fromGroup, eve.fromQQ, Dice::MsgType::Group), block_msg);
 	if (block_msg) eve.message_block();
@@ -93,10 +108,32 @@ EVE_Exit(eventExit)
 	MainEventHandler.HandleExitEvent();
 	return 0;
 }
-//EVE_Request_AddGroup_EX(Name)
-//{
-//	MainEventHandler.HandleAddGroupEvent();
-//	return 0;
-//}
+
+EVE_Request_AddGroup(eventGroupInvited)
+{
+	if (subType == 2)
+	{
+		MainEventHandler.HandleAddGroupEvent(fromGroup, fromQQ, subType, responseFlag);
+	}
+	return 0;
+}
+
+EVE_Request_AddFriend(eventRequest_AddFriend)
+{
+	MainEventHandler.HandleAddFriendEvent(fromQQ, responseFlag);
+	return 0;
+}
+
+EVE_System_GroupMemberDecrease(eventGroupMemberDecrease)
+{
+	if (subType == 3)
+	{
+		setGroupLeave(fromGroup, false);
+		AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]我在群" + getGroupList()[fromGroup] + "[" + to_string(fromGroup) + "]被踢了！我已经溜回来了，顺便把那个[" + to_string(fromQQ) + "]拉黑成了2级黑名单！\n该群的审核操作为：\n" + std::Banreason(0, fromGroup), std::masterGroup, std::master, Dice::MsgType::Group));
+		BanListFG.insertList(fromGroup, 4, "因为被踢拉黑");
+		BanListFP.insertList(fromQQ, 5, "因为被踢拉黑");
+	}
+	return 0;
+}
 
 MUST_AppInfo_RETURN(CQAPPID);

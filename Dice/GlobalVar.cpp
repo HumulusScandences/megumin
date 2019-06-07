@@ -38,7 +38,7 @@ const unsigned short Dice_Build = 524;
 const std::string Dice_Ver_Without_Build = "2.3.8.24";
 const std::string DiceRequestHeader = "Dice/" + Dice_Ver_Without_Build;
 const std::string Dice_Ver = Dice_Ver_Without_Build + "(" + std::to_string(Dice_Build) + ")";
-const std::string Dice_Short_Ver = "Dice! by 溯洄\nmegumin 0.1.3ver\nVersion " + Dice_Ver+"\n斯塔尼亚.shiki等提供了部分代码";
+const std::string Dice_Short_Ver = "Dice! by 溯洄\nMegumin 0.3.1ver\nVersion " + Dice_Ver+"\n斯塔尼亚.shiki等提供了部分代码";
 #ifdef __clang__
 #ifdef _MSC_VER
 const std::string Dice_Full_Ver = Dice_Short_Ver + " [CLANG " + __clang_version__ + " MSVC " + std::to_string(_MSC_FULL_VER) + " " + __DATE__ + " " + __TIME__ + "]\n斯塔尼亚特供 缇娜·里谢尔参上！(原坂本酱)";
@@ -100,6 +100,7 @@ std::map<const std::string, std::string> GlobalMsg
 	{"strInputErr", "命令或掷骰表达式输入错误!"},
 	{"strUnknownErr", "发生了未知错误!"},
 	{"strTeamInsertErr", "批量插入格式错误，使用@每个成员的方式插入"},
+	{"strTeameraErr", "批量删除格式错误，使用@每个成员的方式删除"},
 	{"strUnableToGetErrorMsg", "无法获取错误信息!"},
 	{"strDiceTooBigErr", "骰娘被你扔出的骰子淹没了"},
 	{"strRequestRetCodeErr", "访问服务器时出现错误! HTTP状态码: {0}"},

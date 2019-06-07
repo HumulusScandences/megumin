@@ -31,7 +31,7 @@
 #include "NameGenerator.h"
 #include "MsgFormat.h"
 #include "DiceNetwork.h"
-#include "eventHandler.h"
+#include "EventHandler.h"
 #include "RDConstant.h"
 #include "direct.h"
 #include "RandomReply.h"
@@ -289,14 +289,14 @@ int Checker(int checknum, int skillnum,int checktype)
 		else if (checknum <= 95)return 5;
 		else return 6;
 	}
-	else if (checktype == 2)
+	else if (checktype == 3)
 	{
 		if (checknum == 1 && skillnum <= 50 && checknum <= skillnum)return 1;
 		else if (checknum <= 5 && skillnum >= 50 && checknum <= skillnum)return 1;
 		else if (checknum <= skillnum / 5)return 2;
 		else if (checknum <= skillnum / 2)return 3;
 		else if (checknum <= skillnum)return 4;
-		else if (checknum <= 95 || (skillnum >= 50 && checknum != 100))return 5;
+		else if (checknum <= 95 || (skillnum > 50 && checknum != 100))return 5;
 		else return 6;
 	}
 	else
@@ -347,7 +347,6 @@ std::string getName(long long QQ, long long GroupID = 0)
 }
 
 map<long long, int> DefaultDice;
-const long long master = 2918762900;
 map<long long, string> WelcomeMsg;
 set<long long> DisabledGroup;
 set<long long> DisabledDiscuss;
@@ -357,7 +356,11 @@ set<long long> DisabledHELPGroup;
 set<long long> DisabledHELPDiscuss;
 set<long long> DisabledOBGroup;
 set<long long> DisabledOBDiscuss;
+set<long long>UnsignedGroup;
 unique_ptr<Initlist> ilInitList;
+long long linkgroup = 3;
+long long std::master = 2918762900;
+long long std::masterGroup = 812839433;
 
 struct SourceType
 {
@@ -375,7 +378,7 @@ struct SourceType
 	{
 		return this->QQ < b.QQ;
 	}
-};
+}; 
 
 struct ClueType
 {
@@ -405,6 +408,7 @@ map<string, PropType>::iterator F2Fsk;
 multimap<SourceType,long long>TeamSaver;
 multimap<SourceType, Listcon>Clist;
 map<SourceType, long long>duelT;
+map<long long, long long>useT;
 map<SourceType, TypeNumber>KpGroup;
 map<TypeNumber, int[5]>GroupDuel;
 map<SourceType, string>Usingname;
@@ -416,6 +420,8 @@ char arr[80][80];
 string strFileLoc;
 SYSTEMTIME stNow = { 0 };
 SYSTEMTIME stTmp = { 0 };
+Banlist std::BanListFP;
+Banlist std::BanListFG;
 bool ClistFounder(SourceType d, string name)
 {
 	map<string, PropType>::iterator finder2;
@@ -441,7 +447,7 @@ string DBgetter(int a)
 	else if (125 <= a&&a <= 164)return"1d4";
 	else 
 	{
-		string strRE = to_string((a - 164) / 80) + "d6";
+		string strRE = to_string((a - 84) / 80) + "d6";
 		return strRE;
 	}
 }
@@ -452,7 +458,7 @@ string getDetail(SourceType a, string b)
 	{
 		if (CharacterProp[a].count("体型") && CharacterProp[a].count("理智") && CharacterProp[a].count("意志") && CharacterProp[a].count("体质") && CharacterProp[a].count("力量"))
 		{
-			strReturn += "\nsan:" + to_string(CharacterProp[a]["理智"]) + "/" + to_string(CharacterProp[a]["意志"]) + "\nDB:" + DBgetter(CharacterProp[a]["体型"] + CharacterProp[a]["力量"]) + "  hp:" + to_string(int(ceil((CharacterProp[a]["体质"] + CharacterProp[a]["体型"]) / 10)));
+			strReturn += "\nSAN:" + to_string(CharacterProp[a]["理智"]) + "/" + to_string(CharacterProp[a]["意志"]) + "\nDB:" + DBgetter(CharacterProp[a]["体型"] + CharacterProp[a]["力量"]) + "   HP:" + to_string(int(ceil((CharacterProp[a]["体质"] + CharacterProp[a]["体型"]) / 10)));
 		}
 	}
 	else
@@ -460,13 +466,32 @@ string getDetail(SourceType a, string b)
 		bool checker = ClistFounder(a, b);
 		if (checker && F2Fsk->second.count("体型") && F2Fsk->second.count("理智") && F2Fsk->second.count("意志") && F2Fsk->second.count("体质") && F2Fsk->second.count("力量"))
 		{
-			strReturn += "san:" + to_string(F2Fsk->second["理智"]) + "/" + to_string(F2Fsk->second["意志"]) + "  \nDB:" + DBgetter(F2Fsk->second["体型"] + F2Fsk->second["力量"]) + "hp:" + to_string(int(ceil((F2Fsk->second["体质"] + F2Fsk->second["体型"]) / 10)));
+			strReturn += "\nSAN:" + to_string(F2Fsk->second["理智"]) + "/" + to_string(F2Fsk->second["意志"]) + "  \nDB:" + DBgetter(F2Fsk->second["体型"] + F2Fsk->second["力量"]) + "   HP:" + to_string(int(ceil((F2Fsk->second["体质"] + F2Fsk->second["体型"]) / 10)));
 		}
 	}
-	if (strReturn.empty()) return "人物卡数据不足，无法显示详情";
+	if (strReturn.empty()) return "\n*人物卡数据不足*";
 	else return strReturn;
 }
-//简易计时器
+string std::Banreason(bool person, long long Groupid)
+{
+	if (person)
+	{
+		Banlist::DataReturn* Dmsg = BanListFP.getListData(Groupid);
+		if (!Dmsg)
+			return "查无此人~~";
+		else
+			return "黑名单等级：" + to_string(Dmsg->level) + "\n操作原因：" + Dmsg->reason;
+	}
+	else
+	{
+		Banlist::DataReturn* Dmsg = BanListFG.getListData(Groupid);
+		if (!Dmsg)
+			return "查无此群~~";
+		else
+			return "黑名单等级：" + to_string(Dmsg->level) + "\n操作原因：" + Dmsg->reason;
+	}
+}
+
 string getUname(SourceType a)
 {
 	if (Usingname.count(a))return Usingname[a];
@@ -476,11 +501,115 @@ string getUname(SourceType a)
 		return b;
 	}
 }
+void UnsignedGroupsave(int type)
+{
+	string temfile = strFileLoc;
+	if (type) temfile = temfile + "temfile\\";
+	ofstream ofstreamUnsignedGroup(temfile + "UnsignedGroup.RDconf", ios::out | ios::trunc);
+	for (auto it = UnsignedGroup.begin(); it != UnsignedGroup.end(); ++it)
+	{
+		ofstreamUnsignedGroup << to_string(*it) << std::endl;
+	}
+	ofstreamUnsignedGroup.close();
+}
+void UnsignedGroupload(int type)
+{
+	string temfile = strFileLoc;
+	if (type) temfile = temfile + "temfile\\";
+	ifstream ifstreamUnsignedGroup(temfile + "UnsignedGroup.RDconf");
+	if (ifstreamUnsignedGroup)
+	{
+		long long GroupN;
+		while (ifstreamUnsignedGroup >> GroupN)
+		{
+			UnsignedGroup.insert(GroupN);
+		}
+	}
+	ifstreamUnsignedGroup.close();
+}
+
+void Banlist::blacklistFPsave(bool tem)
+{
+	string temfile = strFileLoc;
+	if (tem) temfile = temfile + "temfile\\";
+	ofstream ofstreamBlacklist(temfile + "BlacklistFP.RDconf", ios::out | ios::trunc);
+	for (auto it = Banlist::Blacklist.begin(); it != Banlist::Blacklist.end(); ++it)
+	{
+		ofstreamBlacklist << it->first << " " << it->second.level << " " << it->second.reason << std::endl;
+	}
+	ofstreamBlacklist.close();
+}
+void Banlist::blacklistFPload(bool tem)
+{
+	BanListFP.insertList(master, 0, "master");//初始化master
+	Banlist::Blacklist.clear();
+	string temfile = strFileLoc;
+	if (tem) temfile = temfile + "temfile\\";
+	ifstream ifstreamBlacklist(temfile + "BlacklistFP.RDconf");
+	if (ifstreamBlacklist)
+	{
+		long long QQ;
+		int level;
+		string reason;
+		while (ifstreamBlacklist >> QQ >> level >> reason)
+		{
+			DataReturn a;
+			a.level = level;
+			a.reason = reason;
+			Banlist::Blacklist[QQ] = a;
+		}
+	}
+	ifstreamBlacklist.close();
+}
+void Banlist::blacklistFGsave(bool tem)
+{
+	string temfile = strFileLoc;
+	if (tem) temfile = temfile + "temfile\\";
+	ofstream ofstreamBlacklist(temfile + "Blacklist.RDconf", ios::out | ios::trunc);
+	for (auto it = Banlist::Blacklist.begin(); it != Banlist::Blacklist.end(); ++it)
+	{
+		ofstreamBlacklist << it->first << " " << it->second.level << " " << it->second.reason << std::endl;
+	}
+	ofstreamBlacklist.close();
+}
+void Banlist::blacklistFGload(bool tem)
+{
+	Blacklist.clear();
+	string temfile = strFileLoc;
+	if (tem) temfile = temfile + "temfile\\";
+	ifstream ifstreamBlacklist(temfile + "Blacklist.RDconf");
+	if (ifstreamBlacklist)
+	{
+		long long QQ;
+		int level;
+		string reason;
+		while (ifstreamBlacklist >> QQ >> level >> reason)
+		{
+			DataReturn a;
+			a.level = level;
+			a.reason = reason;
+			Banlist::Blacklist[QQ] = a;
+		}
+	}
+	ifstreamBlacklist.close();
+}
+//简易计时器
 void ConsoleTimer()
 {
 	while (Enabled)
 	{
-		AddMsgToQueue(Dice::DiceMsg("开始计时，10小时后将对数据进行保存", 0LL, master, Dice::MsgType::Private));
+		map<long long, string> GroupList = getGroupList();
+		for (auto it = GroupList.begin(); it != GroupList.end(); it++)
+		{
+			if (!useT.count(it->first))useT[it->first] = time(NULL);
+			if (time(NULL) - useT[it->first] > 720000)
+			{
+				AddMsgToQueue(Dice::DiceMsg("因为长时间未使用，即将自动退群，本次退群不清除白名单", it->first, std::master, Dice::MsgType::Group));
+				setGroupLeave(it->first, false);
+			}
+		}
+
+		AddMsgToQueue(Dice::DiceMsg("开始计时，10小时后将对数据进行保存", 0LL, std::master, Dice::MsgType::Private));
 		Sleep(36000000);
 		GetLocalTime(&stNow);
 			ofstream ofstreamDisabledGroup(strFileLoc + "DisabledGroup.RDconf", ios::out | ios::trunc);
@@ -496,6 +625,28 @@ void ConsoleTimer()
 				ofstreamDisabledDiscuss << *it << std::endl;
 			}
 			ofstreamDisabledDiscuss.close();
+			BanListFG.blacklistFGsave(0);
+			BanListFP.blacklistFPsave(0);
+			UnsignedGroupsave(0);
+
+			ofstream ofstreamuseT(strFileLoc + "useT.RDconf", ios::out | ios::trunc);
+			for (auto it = useT.begin(); it != useT.end(); ++it)
+			{
+				ofstreamuseT << to_string(it->first) << to_string(it->second) << std::endl;
+			}
+			ofstreamuseT.close();
+
+			BanListFG.blacklistFGsave(0);
+			BanListFP.blacklistFPsave(0);
+			UnsignedGroupsave(0);
+
+			ofstream ofstreamTeamSaver(strFileLoc + "TeamSaver.RDconf", ios::out | ios::trunc);
+			for (auto it = TeamSaver.begin(); it != TeamSaver.end(); ++it)
+			{
+				ofstreamTeamSaver << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
+			}
+			ofstreamTeamSaver.close();
+
 			ofstream ofstreamDisabledJRRPGroup(strFileLoc + "DisabledJRRPGroup.RDconf", ios::out | ios::trunc);
 			for (auto it = DisabledJRRPGroup.begin(); it != DisabledJRRPGroup.end(); ++it)
 			{
@@ -627,7 +778,7 @@ void ConsoleTimer()
 				ofstreamWelcomeMsg << it->first << " " << it->second << std::endl;
 			}
 			ofstreamWelcomeMsg.close();
-			AddMsgToQueue(Dice::DiceMsg("自动保存成功啦！", 0LL, master, Dice::MsgType::Private));
+			AddMsgToQueue(Dice::DiceMsg("自动保存成功啦！", 0LL, std::master, Dice::MsgType::Private));
 	}
 }
 namespace Dice
@@ -648,6 +799,10 @@ namespace Dice
 				*/
 		Name = make_unique<NameStorage>(strFileLoc + "Name.dicedb");
 		Log = make_unique<LogStorage>(strFileLoc + "Log.dicedb");
+		BanListFG.blacklistFGload(0);
+		BanListFP.blacklistFPload(0);
+		UnsignedGroupload(0);
+		BanListFP.insertList(master, 0, "master");//初始化master
 		ifstream ifstreamCharacterProp(strFileLoc + "CharacterProp.RDconf");
 		if (ifstreamCharacterProp)
 		{
@@ -691,6 +846,18 @@ namespace Dice
 			}
 		}
 		ifstreamDuellist.close();
+
+		ifstream ifstreamuseT(strFileLoc + "useT.RDconf");
+		if (ifstreamuseT)
+		{
+			long long T, GrouporDiscussID;
+			while (ifstreamuseT >> GrouporDiscussID >> T)
+			{
+				useT[GrouporDiscussID] = T;
+			}
+		}
+		ifstreamuseT.close();
+
 
 		ifstream ifstreamClist(strFileLoc + "Clist.RDconf");
 		if (ifstreamClist)
@@ -737,6 +904,19 @@ namespace Dice
 			}
 		}
 		ifstreamUsingname.close();
+
+		ifstream ifstreamTeamSaver(strFileLoc + "TeamSaver.RDconf");
+		if (ifstreamTeamSaver)
+		{
+			long long QQ, GrouporDiscussID;
+			int Type;
+			long long pl;
+			while (ifstreamTeamSaver >> QQ >> Type >> GrouporDiscussID >> pl)
+			{
+				TeamSaver.insert({ SourceType(QQ, Type, GrouporDiscussID),pl });
+			}
+		}
+		ifstreamTeamSaver.close();
 
 		ifstream ifstreamDisabledGroup(strFileLoc + "DisabledGroup.RDconf");
 		if (ifstreamDisabledGroup)
@@ -879,15 +1059,79 @@ namespace Dice
 	}
 	void EventHandler::HandleMsgEvent(DiceMsg dice_msg, bool &block_msg)
 	{
-		string Cname = "default";
-		if (Usingname.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
-		Cname = Usingname[SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)];
-		if (Cname.empty())
+		//检测黑名单
+		if (dice_msg.group_id != masterGroup)
 		{
-			Cname = "default";
-			dice_msg.Reply("由于未知错误，你的当前人物卡名称为空，继续录入可能会导致其他人的数据丢失，现以将你的人物卡名称改为\"default\"请尽快联系master以修复可能的bug~~");
+			//检测黑名单成员
+			switch (BanListFP.findlistON(dice_msg.qq_id))
+			{
+			case 3:break;
+			case 4:
+			{
+				return;
+			}
+			case 5:
+			{
+				if (dice_msg.msg_type == Dice::MsgType::Group)
+				{
+					dice_msg.Reply("发现二级黑名单的混蛋，正在退群。。。");
+					setGroupLeave(dice_msg.group_id, false);
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在群" + getGroupList()[dice_msg.group_id] + "[" + to_string(dice_msg.group_id) + "]" + "中发现二级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退群。\n"+ std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				else if (dice_msg.msg_type == Dice::MsgType::Discuss)
+				{
+					dice_msg.Reply("发现二级黑名单的混蛋，正在退出讨论组。。。");
+					setDiscussLeave(dice_msg.group_id);
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在讨论组[" + to_string(dice_msg.group_id) + "]" + "中发现二级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退出该讨论组。\n" + std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				return;
+			}
+			case 6:
+			{
+				if (dice_msg.msg_type == Dice::MsgType::Group)
+				{
+					dice_msg.Reply("发现三级黑名单的混蛋，已经置本群为灰名单，正在退群。。。");
+					BanListFG.eraList(dice_msg.group_id);
+					setGroupLeave(dice_msg.group_id, false);
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在群" + getGroupList()[dice_msg.group_id] + "[" + to_string(dice_msg.group_id) + "]" + "中发现三级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退群。\n" + std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				else if (dice_msg.msg_type == Dice::MsgType::Discuss)
+				{
+					dice_msg.Reply("发现三级黑名单的混蛋，正在退出讨论组。。。");
+					setDiscussLeave(dice_msg.group_id);
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在讨论组[" + to_string(dice_msg.group_id) + "]" + "中发现三级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退出该讨论组。\n" + std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				return;
+			}
+			case 7:
+			{
+				if (dice_msg.msg_type == Dice::MsgType::Group)
+				{
+					dice_msg.Reply("发现四级黑名单的大混蛋，已经置本群为黑名单，正在退群。。。");
+					setGroupLeave(dice_msg.group_id, false);
+					BanListFG.insertList(dice_msg.group_id, 4, "因发现四级黑名单拉黑");
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在群[" + to_string(dice_msg.group_id) + "]" + "中发现四级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退群。\n" + std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				else if (dice_msg.msg_type == Dice::MsgType::Discuss)
+				{
+					dice_msg.Reply("发现四级黑名单的混蛋，正在退出讨论组。。。");
+					setDiscussLeave(dice_msg.group_id);
+					AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]在讨论组[" + to_string(dice_msg.group_id) + "]" + "中发现四级黑名单的坏蛋" + getStrangerInfo(dice_msg.qq_id).nick + "[" + to_string(dice_msg.qq_id) + "]" + "，已经退出该讨论组。\n" + std::Banreason(1, dice_msg.qq_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				}
+				return;
+			}
+			default:break;
+			}
+			//检测黑名单群
+			if (BanListFG.findlistON(dice_msg.group_id) == 4)
+			{
+				dice_msg.Reply("这群是黑名单诶黑名单!正在退群。。。");
+				setGroupLeave(dice_msg.group_id, false);
+				AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]检测到黑名单群" + getGroupList()[dice_msg.group_id] + "[" + to_string(dice_msg.group_id) + "]，已经退群！。\n" + std::Banreason(0, dice_msg.group_id), std::masterGroup, std::master, Dice::MsgType::Group));
+				return;
+			}
 		}
-		//保险措施
+		if(linkgroup !=3&&dice_msg.group_id == linkgroup&& dice_msg.msg.length()<=150)AddMsgToQueue(Dice::DiceMsg("复读*"+dice_msg.msg, std::masterGroup, std::master, Dice::MsgType::Group));
 		init(dice_msg.msg);
 		while (isspace(static_cast<unsigned char>(dice_msg.msg[0])))
 			dice_msg.msg.erase(dice_msg.msg.begin());
@@ -900,8 +1144,6 @@ namespace Dice
 			}
 			dice_msg.msg = dice_msg.msg.substr(strAt.length());
 		}
-		emailTimeUpdata();
-		InfoTimeUpdata();
 		init2(dice_msg.msg);
 		const string strNickName = getName(dice_msg.qq_id, dice_msg.group_id);
 		if (dice_msg.msg != ".end" && dice_msg.msg != ".log off")
@@ -909,14 +1151,27 @@ namespace Dice
 			Log->record(dice_msg.group_id, strNickName, dice_msg.msg);
 		}
 		if (dice_msg.msg[0] != '.')
+		{
+			if (dice_msg.msg[0] == '#' && (dice_msg.qq_id == std::master||BanListFP.findList(dice_msg.qq_id,2)||BanListFP.findList(dice_msg.qq_id, 1)))EventHandler::HandleMasterOder(move(dice_msg),block_msg);
 			return;
+		}
+		emailTimeUpdata();
+		InfoTimeUpdata();
 		int intMsgCnt = 1;
 		while (isspace(static_cast<unsigned char>(dice_msg.msg[intMsgCnt])))
 			intMsgCnt++;
 		block_msg = true;
+		string Cname = "default";
+		if (Usingname.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
+		Cname = Usingname[SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)];
+		if (Cname.empty())
+		{
+			Cname = "default";
+			Usingname[SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)] = "default";
+			dice_msg.Reply("由于未知错误，你的当前人物卡名称为空，继续录入可能会导致其他人的数据丢失，现以将你的人物卡名称改为\"default\"请尽快联系master以修复可能的bug~~");
+		}
 		string strLowerMessage = dice_msg.msg;
 		transform(strLowerMessage.begin(), strLowerMessage.end(), strLowerMessage.begin(), [](unsigned char c) { return tolower(c); });
-
 		if (strLowerMessage.substr(intMsgCnt, 3) == "bot")
 		{
 			intMsgCnt += 3;
@@ -1047,397 +1302,22 @@ namespace Dice
 				}
 			}
 		}
-		else if (strLowerMessage.substr(intMsgCnt, 7) == "save"&& dice_msg.qq_id ==master)
-		{
-		CString path1 = strFileLoc.c_str();
-		CString path2 = "/temfile";
-		CString path = path1 + path2;
-		if (!PathIsDirectory(path)) {
-			::CreateDirectory(path, 0);
-		}
-		dice_msg.Reply("正在手动保存中，请稍候");
-		ofstream ofstreamDisabledGroup(strFileLoc +"//temfile//" + "DisabledGroup.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledGroup.begin(); it != DisabledGroup.end(); ++it)
-		{
-			ofstreamDisabledGroup << *it << std::endl;
-		}
-		ofstreamDisabledGroup.close();
-
-		ofstream ofstreamDisabledDiscuss(strFileLoc +"//temfile//" + "DisabledDiscuss.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledDiscuss.begin(); it != DisabledDiscuss.end(); ++it)
-		{
-			ofstreamDisabledDiscuss << *it << std::endl;
-		}
-		ofstreamDisabledDiscuss.close();
-		ofstream ofstreamDisabledJRRPGroup(strFileLoc +"//temfile//" + "DisabledJRRPGroup.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledJRRPGroup.begin(); it != DisabledJRRPGroup.end(); ++it)
-		{
-			ofstreamDisabledJRRPGroup << *it << std::endl;
-		}
-		ofstreamDisabledJRRPGroup.close();
-
-		ofstream ofstreamDisabledJRRPDiscuss(strFileLoc +"//temfile//" + "DisabledJRRPDiscuss.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledJRRPDiscuss.begin(); it != DisabledJRRPDiscuss.end(); ++it)
-		{
-			ofstreamDisabledJRRPDiscuss << *it << std::endl;
-		}
-		ofstreamDisabledJRRPDiscuss.close();
-
-		ofstream ofstreams_Count(strFileLoc +"//temfile//" + "s_Count.RDconf", ios::out | ios::trunc);
-		for (auto it = s_Count.begin(); it != s_Count.end(); ++it)
-		{
-			ofstreams_Count << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
-				<< it->second[1] << " "
-				<< it->second[2] << " "
-				<< it->second[3] << " "
-				<< it->second[4] << " "
-				<< it->second[5] << " "
-				<< it->second[6] << " "
-				<< it->second[7] << " "
-				<< it->second[8] << std::endl;
-		}
-		ofstreams_Count.close();
-
-		ofstream ofstreamDuellist(strFileLoc +"//temfile//" + "Duellist.RDconf", ios::out | ios::trunc);
-		for (auto it = Duellist.begin(); it != Duellist.end(); ++it)
-		{
-			ofstreamDuellist << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
-				<< it->second << std::endl;
-		}
-		ofstreamDuellist.close();
-
-		ofstream ofstreamClist(strFileLoc +"//temfile//" + "Clist.RDconf", ios::out | ios::trunc);
-		for (auto it = Clist.begin(); it != Clist.end(); ++it)
-		{
-			for (auto it1 = it->second.begin(); it1 != it->second.end(); ++it1)
-			{
-				for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
-				{
-					ofstreamClist << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
-						<< it1->first << " " << it2->first << " " << it2->second << std::endl;
-				}
-			}
-		}
-		ofstreamClist.close();
-
-		ofstream ofstreamUsingname(strFileLoc +"//temfile//" + "Usingname.RDconf", ios::out | ios::trunc);
-		for (auto it = Usingname.begin(); it != Usingname.end(); ++it)
-		{
-			if (!it->second.empty())
-			ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
-		}
-		ofstreamUsingname.close();
-
-		ofstream ofstreamDisabledHELPGroup(strFileLoc +"//temfile//" + "DisabledHELPGroup.RDconf", ios::in | ios::trunc);
-		for (auto it = DisabledHELPGroup.begin(); it != DisabledHELPGroup.end(); ++it)
-		{
-			ofstreamDisabledHELPGroup << *it << std::endl;
-		}
-		ofstreamDisabledHELPGroup.close();
-
-		ofstream ofstreamDisabledHELPDiscuss(strFileLoc +"//temfile//" + "DisabledHELPDiscuss.RDconf", ios::in | ios::trunc);
-		for (auto it = DisabledHELPDiscuss.begin(); it != DisabledHELPDiscuss.end(); ++it)
-		{
-			ofstreamDisabledHELPDiscuss << *it << std::endl;
-		}
-		ofstreamDisabledHELPDiscuss.close();
-
-		ofstream ofstreamDisabledOBGroup(strFileLoc +"//temfile//" + "DisabledOBGroup.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledOBGroup.begin(); it != DisabledOBGroup.end(); ++it)
-		{
-			ofstreamDisabledOBGroup << *it << std::endl;
-		}
-		ofstreamDisabledOBGroup.close();
-
-		ofstream ofstreamDisabledOBDiscuss(strFileLoc +"//temfile//" + "DisabledOBDiscuss.RDconf", ios::out | ios::trunc);
-		for (auto it = DisabledOBDiscuss.begin(); it != DisabledOBDiscuss.end(); ++it)
-		{
-			ofstreamDisabledOBDiscuss << *it << std::endl;
-		}
-		ofstreamDisabledOBDiscuss.close();
-
-		ofstream ofstreamObserveGroup(strFileLoc +"//temfile//" + "ObserveGroup.RDconf", ios::out | ios::trunc);
-		for (auto it = ObserveGroup.begin(); it != ObserveGroup.end(); ++it)
-		{
-			ofstreamObserveGroup << it->first << " " << it->second << std::endl;
-		}
-		ofstreamObserveGroup.close();
-
-		ofstream ofstreamObserveDiscuss(strFileLoc +"//temfile//" + "ObserveDiscuss.RDconf", ios::out | ios::trunc);
-		for (auto it = ObserveDiscuss.begin(); it != ObserveDiscuss.end(); ++it)
-		{
-			ofstreamObserveDiscuss << it->first << " " << it->second << std::endl;
-		}
-		ofstreamObserveDiscuss.close();
-		ofstream ofstreamCharacterProp(strFileLoc +"//temfile//" + "CharacterProp.RDconf", ios::out | ios::trunc);
-		for (auto it = CharacterProp.begin(); it != CharacterProp.end(); ++it)
-		{
-			for (auto it1 = it->second.cbegin(); it1 != it->second.cend(); ++it1)
-			{
-				ofstreamCharacterProp << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
-					<< it1->first << " " << it1->second << std::endl;
-			}
-		}
-		ofstreamCharacterProp.close();
-		ofstream ofstreamDefault(strFileLoc +"//temfile//" + "Default.RDconf", ios::out | ios::trunc);
-		for (auto it = DefaultDice.begin(); it != DefaultDice.end(); ++it)
-		{
-			ofstreamDefault << it->first << " " << it->second << std::endl;
-		}
-		ofstreamDefault.close();
-
-		ofstream ofstreamWelcomeMsg(strFileLoc +"//temfile//" + "WelcomeMsg.RDconf", ios::out | ios::trunc);
-		for (auto it = WelcomeMsg.begin(); it != WelcomeMsg.end(); ++it)
-		{
-			while (it->second.find(' ') != string::npos)
-				it->second.replace(it->second.find(' '), 1, "{space}");
-			while (it->second.find('\t') != string::npos)
-				it->second.replace(it->second.find('\t'), 1, "{tab}");
-			while (it->second.find('\n') != string::npos)
-				it->second.replace(it->second.find('\n'), 1, "{endl}");
-			while (it->second.find('\r') != string::npos)
-				it->second.replace(it->second.find('\r'), 1, "{enter}");
-			ofstreamWelcomeMsg << it->first << " " << it->second << std::endl;
-		}
-		ofstreamWelcomeMsg.close();
-		dice_msg.Reply("手动保存成功啦！");
-		}
-		else if (strLowerMessage.substr(intMsgCnt, 7) == "load" && dice_msg.qq_id == master && dice_msg.msg_type == Dice::MsgType::Private)
-		{
-		dice_msg.Reply("正在读取数据中，请稍候....");
-		ifstream ifstreamCharacterProp(strFileLoc +"//temfile//" + "CharacterProp.RDconf");
-		if (ifstreamCharacterProp)
-		{
-			long long QQ, GrouporDiscussID;
-			int Type, Value;
-			string SkillName;
-			while (ifstreamCharacterProp >> QQ >> Type >> GrouporDiscussID >> SkillName >> Value)
-			{
-				CharacterProp[SourceType(QQ, Type, GrouporDiscussID)][SkillName] = Value;
-			}
-		}
-		ifstreamCharacterProp.close();
-
-		ifstream ifstreams_Count(strFileLoc +"//temfile//" + "s_Count.RDconf");
-		if (ifstreams_Count)
-		{
-			long long QQ, GrouporDiscussID;
-			int Type, Value1, Value2, Value3, Value4, Value5, Value6, Value7, Value8;
-			while (ifstreams_Count >> QQ >> Type >> GrouporDiscussID >> Value1 >> Value2 >> Value3 >> Value4 >> Value5 >> Value6 >> Value7 >> Value8)
-			{
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][1] = Value1;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][2] = Value2;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][3] = Value3;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][4] = Value4;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][5] = Value5;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][6] = Value6;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][7] = Value7;
-				s_Count[SourceType(QQ, Type, GrouporDiscussID)][8] = Value8;
-			}
-		}
-		ifstreams_Count.close();
-
-		ifstream ifstreamDuellist(strFileLoc +"//temfile//" + "Duellist.RDconf");
-		if (ifstreamDuellist)
-		{
-			long long QQ, GrouporDiscussID;
-			int Type, Value;
-			while (ifstreamDuellist >> QQ >> Type >> GrouporDiscussID >> Value)
-			{
-				Duellist[SourceType(QQ, Type, GrouporDiscussID)] = Value;
-			}
-		}
-		ifstreamDuellist.close();
-
-		ifstream ifstreamClist(strFileLoc +"//temfile//" + "Clist.RDconf");
-		if (ifstreamClist)
-		{
-			long long QQ, GrouporDiscussID;
-			int Type, Value;
-			string Skillname, StoCname;
-			while (ifstreamClist >> QQ >> Type >> GrouporDiscussID >> StoCname >> Skillname >> Value)
-			{
-				PropType proptype1;
-				Listcon listcon1;
-				proptype1[Skillname] = Value;
-				listcon1[StoCname] = proptype1;
-				const auto range = Clist.equal_range(SourceType(QQ, Type, GrouporDiscussID));
-				multimap<SourceType, Listcon>::iterator Cfinder1 = range.first;
-				map<string, PropType>::iterator finder2;
-				bool judge = 1;
-				for (; Cfinder1 != range.second;)
-				{
-					finder2 = Cfinder1->second.begin();
-					if (finder2->first == StoCname)
-					{
-						finder2->second[Skillname] = Value;
-						judge = 0;
-						break;
-					}
-					if (++Cfinder1 == Clist.end())break;
-				}
-				if (judge)Clist.insert(make_pair(SourceType(QQ, Type, GrouporDiscussID), listcon1));
-				listcon1.clear(); proptype1.clear();
-			}
-		}
-		ifstreamClist.close();
-
-		ifstream ifstreamUsingname(strFileLoc +"//temfile//" + "Usingname.RDconf");
-		if (ifstreamUsingname)
-		{
-			long long QQ, GrouporDiscussID;
-			int Type;
-			string usingname1;
-			while (ifstreamUsingname >> QQ >> Type >> GrouporDiscussID >> usingname1)
-			{
-				Usingname[SourceType(QQ, Type, GrouporDiscussID)] = usingname1;
-			}
-		}
-		ifstreamUsingname.close();
-
-		ifstream ifstreamDisabledGroup(strFileLoc +"//temfile//" + "DisabledGroup.RDconf");
-		if (ifstreamDisabledGroup)
-		{
-			long long Group;
-			while (ifstreamDisabledGroup >> Group)
-			{
-				DisabledGroup.insert(Group);
-			}
-		}
-		ifstreamDisabledGroup.close();
-		ifstream ifstreamDisabledDiscuss(strFileLoc +"//temfile//" + "DisabledDiscuss.RDconf");
-		if (ifstreamDisabledDiscuss)
-		{
-			long long Discuss;
-			while (ifstreamDisabledDiscuss >> Discuss)
-			{
-				DisabledDiscuss.insert(Discuss);
-			}
-		}
-		ifstreamDisabledDiscuss.close();
-		ifstream ifstreamDisabledJRRPGroup(strFileLoc +"//temfile//" + "DisabledJRRPGroup.RDconf");
-		if (ifstreamDisabledJRRPGroup)
-		{
-			long long Group;
-			while (ifstreamDisabledJRRPGroup >> Group)
-			{
-				DisabledJRRPGroup.insert(Group);
-			}
-		}
-		ifstreamDisabledJRRPGroup.close();
-		ifstream ifstreamDisabledJRRPDiscuss(strFileLoc +"//temfile//" + "DisabledJRRPDiscuss.RDconf");
-		if (ifstreamDisabledJRRPDiscuss)
-		{
-			long long Discuss;
-			while (ifstreamDisabledJRRPDiscuss >> Discuss)
-			{
-				DisabledJRRPDiscuss.insert(Discuss);
-			}
-		}
-		ifstreamDisabledJRRPDiscuss.close();
-		ifstream ifstreamDisabledHELPGroup(strFileLoc +"//temfile//" + "DisabledHELPGroup.RDconf");
-		if (ifstreamDisabledHELPGroup)
-		{
-			long long Group;
-			while (ifstreamDisabledHELPGroup >> Group)
-			{
-				DisabledHELPGroup.insert(Group);
-			}
-		}
-		ifstreamDisabledHELPGroup.close();
-		ifstream ifstreamDisabledHELPDiscuss(strFileLoc +"//temfile//" + "DisabledHELPDiscuss.RDconf");
-		if (ifstreamDisabledHELPDiscuss)
-		{
-			long long Discuss;
-			while (ifstreamDisabledHELPDiscuss >> Discuss)
-			{
-				DisabledHELPDiscuss.insert(Discuss);
-			}
-		}
-		ifstreamDisabledHELPDiscuss.close();
-		ifstream ifstreamDisabledOBGroup(strFileLoc +"//temfile//" + "DisabledOBGroup.RDconf");
-		if (ifstreamDisabledOBGroup)
-		{
-			long long Group;
-			while (ifstreamDisabledOBGroup >> Group)
-			{
-				DisabledOBGroup.insert(Group);
-			}
-		}
-		ifstreamDisabledOBGroup.close();
-		ifstream ifstreamDisabledOBDiscuss(strFileLoc +"//temfile//" + "DisabledOBDiscuss.RDconf");
-		if (ifstreamDisabledOBDiscuss)
-		{
-			long long Discuss;
-			while (ifstreamDisabledOBDiscuss >> Discuss)
-			{
-				DisabledOBDiscuss.insert(Discuss);
-			}
-		}
-		ifstreamDisabledOBDiscuss.close();
-		ifstream ifstreamObserveGroup(strFileLoc +"//temfile//" + "ObserveGroup.RDconf");
-		if (ifstreamObserveGroup)
-		{
-			long long Group, QQ;
-			while (ifstreamObserveGroup >> Group >> QQ)
-			{
-				ObserveGroup.insert(make_pair(Group, QQ));
-			}
-		}
-		ifstreamObserveGroup.close();
-
-		ifstream ifstreamObserveDiscuss(strFileLoc +"//temfile//" + "ObserveDiscuss.RDconf");
-		if (ifstreamObserveDiscuss)
-		{
-			long long Discuss, QQ;
-			while (ifstreamObserveDiscuss >> Discuss >> QQ)
-			{
-				ObserveDiscuss.insert(make_pair(Discuss, QQ));
-			}
-		}
-		ifstreamObserveDiscuss.close();
-		ifstream ifstreamDefault(strFileLoc +"//temfile//" + "Default.RDconf");
-		if (ifstreamDefault)
-		{
-			long long QQ;
-			int DefVal;
-			while (ifstreamDefault >> QQ >> DefVal)
-			{
-				DefaultDice[QQ] = DefVal;
-			}
-		}
-		ifstreamDefault.close();
-		ifstream ifstreamWelcomeMsg(strFileLoc +"//temfile//" + "WelcomeMsg.RDconf");
-		if (ifstreamWelcomeMsg)
-		{
-			long long GroupID;
-			string Msg;
-			while (ifstreamWelcomeMsg >> GroupID >> Msg)
-			{
-				while (Msg.find("{space}") != string::npos)
-					Msg.replace(Msg.find("{space}"), 7, " ");
-				while (Msg.find("{tab}") != string::npos)
-					Msg.replace(Msg.find("{tab}"), 5, "\t");
-				while (Msg.find("{endl}") != string::npos)
-					Msg.replace(Msg.find("{endl}"), 6, "\n");
-				while (Msg.find("{enter}") != string::npos)
-					Msg.replace(Msg.find("{enter}"), 7, "\r");
-				WelcomeMsg[GroupID] = Msg;
-			}
-		}
-		ifstreamWelcomeMsg.close();
-		ilInitList = make_unique<Initlist>(strFileLoc +"//temfile//" + "INIT.DiceDB");
-		ifstream ifstreamCustomMsg(strFileLoc +"//temfile//" + "CustomMsg.json");
-		if (ifstreamCustomMsg)
-		{
-			ReadCustomMsg(ifstreamCustomMsg);
-		}
-		ifstreamCustomMsg.close();
-		dice_msg.Reply("读取成功，已经载入临时保存的数据");
-		}
 		else if ((dice_msg.msg_type == Dice::MsgType::Group && DisabledGroup.count(dice_msg.group_id)) || (dice_msg.msg_type == Dice::MsgType::Discuss && DisabledDiscuss.count(dice_msg.group_id)))
 			return;
-		else if (strLowerMessage.substr(intMsgCnt, 4) == "help")
+		else if (dice_msg.msg_type == Dice::MsgType::Group)
+				//检测未审核群
+		if (BanListFG.findlistON(dice_msg.group_id) == 3)
+		{
+			dice_msg.Reply("本群没有经过申请，请加群" + getGroupList()[std::masterGroup] + "[" + to_string(std::masterGroup) + "]申请！可以正常使用.dismiss/.botoff【请不要禁言！】");
+			if (!UnsignedGroup.count(dice_msg.group_id))
+			{
+						AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]检测到群" + getGroupList()[dice_msg.group_id] + "[" + to_string(dice_msg.group_id) + "]，已经加入未审核群列表！", std::masterGroup, std::master, Dice::MsgType::Group));
+						UnsignedGroup.insert(dice_msg.group_id);
+			}
+			return;
+		}
+			useT[dice_msg.group_id] = time(NULL);
+	    if (strLowerMessage.substr(intMsgCnt, 4) == "help")
 		{
 			intMsgCnt += 4;
 			while (strLowerMessage[intMsgCnt] == ' ')
@@ -2022,10 +1902,11 @@ namespace Dice
 		strReply += "你当前使用的人物卡是:\n" + Cname;
 		bool found = 0;
 		if (Cname != "default")found = ClistFounder(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
-		if (found)
+		if (Cname != "default"&&found)
 		{
-			strReply += "\n人物卡状态\n"+getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
+			strReply += "\n人物卡状态"+getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), Cname);
 		}
+		else if (Cname == "default")strReply += "\n人物卡状态" + getDetail(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), "default");
 		if (Clist.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
 		{
 			strReply += "\n你的调查员有———";
@@ -2377,21 +2258,48 @@ namespace Dice
 			while (intMsgCnt != strLowerMessage.length())
 			{
 				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
-				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=" || strLowerMessage.substr(intMsgCnt, 10) == "[CQ:at,qq=")
 				{
 					intMsgCnt += 10;
 					string strNumber;
 					long long PLnumber;
-
+					bool alen = 0;
 					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
 					{
 						strNumber += strLowerMessage[intMsgCnt];
 						intMsgCnt++;
 					}
 					PLnumber = stoll(strNumber);
-					TeamSaver.insert({ SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), PLnumber });
+					if (TeamSaver.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id))>=8)
+					{
+						dice_msg.Reply("你的调查员数量已经到达上限啦！");
+						return;
+					}
+					const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+					multimap<SourceType, long long>::iterator Mfinder = cit.first;
+					for (; Mfinder != cit.second;)
+					{
+						if (Mfinder->second == PLnumber)
+						{
+							if (Usingname.count(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id))&& Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)]!="default")
+								strReply += "\n调查员:" + Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)]+"已经存在";
+							else strReply += "\n调查员:" + getName(PLnumber)+"已经存在";
+							alen = 1;
+						}
+						Mfinder++;
+						if (Mfinder == TeamSaver.end())
+						{
+							break;
+						}
+					}
+					if (!alen)
+					{
+						TeamSaver.insert({ SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id), PLnumber });
+						if (Usingname.count(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id))&&Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)] != "default")
+							strReply += "\n调查员:"+ Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)];
+						else strReply += "\n调查员:" + getName(PLnumber)+"(default)";
+					}
 					intMsgCnt += 1;
-					strReply += "\n调查员：" + getUname(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id));
 				}
 				else
 				{
@@ -2405,10 +2313,16 @@ namespace Dice
 		{
 			intMsgCnt += 3;
 			strReply += "好，我帮你从队伍中划除:";
-			while (intMsgCnt != strLowerMessage.length())
+		if (intMsgCnt == strLowerMessage.length())
+		{
+			TeamSaver.erase(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+			dice_msg.Reply("\n已经清除所有小组成员");
+			return;
+		}
+		else while (intMsgCnt != strLowerMessage.length())
 			{
 				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
-				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq="||strLowerMessage.substr(intMsgCnt, 10) == "[CQ:at,qq=")
 				{
 					intMsgCnt += 10;
 					string strNumber;
@@ -2421,22 +2335,34 @@ namespace Dice
 					PLnumber = stoll(strNumber);
 					const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
 					multimap<SourceType, long long>::iterator Mfinder = cit.first;
-					for (; Mfinder != cit.second; ++Mfinder)
+					for (; Mfinder != cit.second;)
 					{
-						if (Mfinder->second == PLnumber)Mfinder = TeamSaver.erase(Mfinder);
+						bool judge;
+						if (Mfinder->second == PLnumber)
+						{
+							judge = 1;
+							TeamSaver.erase(Mfinder);
+							if (Usingname.count(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id))&& Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)]!="default")
+								strReply += "\n调查员：" + Usingname[SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id)];
+							else strReply += "\n调查员:" + getName(PLnumber)+"(default)";
+							break;
+						}
+						Mfinder++;
+						if ((Mfinder == cit.second|| Mfinder == TeamSaver.end())&&judge)
+						{
+							strReply += "\n你的名下没有这个调查员啦！";
+							break;
+						}
 					}
 					intMsgCnt += 1;
-					strReply += "\n调查员:" + getUname(SourceType(PLnumber, dice_msg.msg_type, dice_msg.group_id));
 				}
 				else
 				{
-					TeamSaver.erase(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
-					dice_msg.Reply("已经清除所有小组成员");
+					dice_msg.Reply("成员清除方式有误，使用@每个成员的方式清除");
 					return;
-
 				}
-				dice_msg.Reply(strReply);
 			}
+		dice_msg.Reply(strReply);
 		}
 		else if (strLowerMessage.substr(intMsgCnt, 4) == "call")
 		{
@@ -2458,6 +2384,90 @@ namespace Dice
 			}
 			dice_msg.Reply(strReply);
 		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "sort")
+		{
+			intMsgCnt += 4;
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
+			string strSkillName;
+			int intCurrentVal;
+			bool found;
+			while (intMsgCnt != dice_msg.msg.length() && !isdigit(static_cast<unsigned char>(dice_msg.msg[intMsgCnt])) && !isspace(static_cast<unsigned char>(dice_msg.msg[intMsgCnt])))
+			{
+				strSkillName += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if(strSkillName.empty())
+			{
+				dice_msg.Reply("请在.teamsort后写入技能值啦，你到底想让我排序什么嘛~");
+				return;
+			}
+			if (SkillNameReplace.count(strSkillName))strSkillName = SkillNameReplace[strSkillName];
+			if (TeamSaver.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
+			{
+				multimap<int, string>Sort;
+				string strNumber;
+				const auto cit = TeamSaver.equal_range(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id));
+				multimap<SourceType, long long>::iterator Mfinder = cit.first;
+				for (; Mfinder != cit.second; ++Mfinder)
+				{
+					SourceType mber = SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id);
+					string Mname;
+					if (Usingname.count(mber)&& Usingname[mber]!="default")
+						Mname =  Usingname[mber];
+					else Mname =  getName(Mfinder->second)+"(default)";
+					if (Mname != "default")found = ClistFounder(mber, Mname);
+					if (Usingname.count(mber)==0|| Usingname[mber] == "default")
+					{
+						if (CharacterProp.count(mber) && CharacterProp[mber].count(strSkillName))
+						{
+							intCurrentVal = CharacterProp[mber][strSkillName];
+						}
+						else if (SkillDefaultVal.count(strSkillName))
+						{
+							intCurrentVal = SkillDefaultVal[strSkillName];
+						}
+						else
+						{
+							intCurrentVal = 0;
+						}
+					}
+					else
+					{
+						if (found == 0)
+						{
+							intCurrentVal = 0;
+						}
+						else
+						{
+							if (F2Fsk->second.count(strSkillName))intCurrentVal = F2Fsk->second[strSkillName];
+							else if (SkillDefaultVal.count(strSkillName))
+							{
+								intCurrentVal = SkillDefaultVal[strSkillName];
+							}
+							else
+							{
+								intCurrentVal = 0;
+							}
+						}
+					}
+					Sort.insert({ intCurrentVal, Mname });
+				}
+				strReply += "这是" + strSkillName + "的技能排序";
+				int i = 1;
+				for (multimap<int, string>::reverse_iterator each = Sort.rbegin(); each != Sort.rend(); each++)
+				{
+					strReply += "\n" +to_string(i) + ". " + each->second + ":" + to_string(each->first) ;
+					i++;
+				}
+				dice_msg.Reply(strReply);
+				Sort.clear();
+			}
+			else
+			{
+				dice_msg.Reply("你的team里没有调查员啦，请仔细确认");
+				return;
+			}
+		}
 		else
 		{
 			if (TeamSaver.count(SourceType(dice_msg.qq_id, dice_msg.msg_type, dice_msg.group_id)) != 0)
@@ -2468,9 +2478,9 @@ namespace Dice
 				multimap<SourceType, long long>::iterator Mfinder = cit.first;
 				for (; Mfinder != cit.second; ++Mfinder)
 				{
-					if (Usingname.count(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)))
-						strReply += "\n"+ Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)] +":"+getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id), Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)]);
-					else strReply += "\n" + getName(Mfinder->second) + "(default):" +getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id),"default");
+					if (Usingname.count(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id))&& Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)]!="default")
+						strReply += "\n#"+ Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)] +":"+getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id), Usingname[SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id)]) + "\n—————";
+					else strReply += "\n#" + getName(Mfinder->second) + "(default):" +getDetail(SourceType(Mfinder->second, dice_msg.msg_type, dice_msg.group_id),"default")+"\n—————";
 				}
 			}
 			else
@@ -3316,7 +3326,8 @@ namespace Dice
 	int timeN = (time(NULL) / 86400) % 50;
 	int jrrp = (9 * timeN * (getLoginQQ() % 1000 + dice_msg.qq_id % 1000 + timeN * 11) + 77) % 100;
 	if (jrrp == 0)jrrp = 100;
-	if (jrrp >= 50)dice_msg.Reply(format(GlobalMsg["strJrrp"], { strNickName, to_string(jrrp - 50) }));
+	if(timeN == 0)dice_msg.Reply("星位失常，人品值是！！人品值是！！“********”（晦涩难懂而又毛骨悚然的语言）");
+	else if (jrrp >= 50)dice_msg.Reply(format(GlobalMsg["strJrrp"], { strNickName, to_string(jrrp - 50) }));
 	else dice_msg.Reply(format(GlobalMsg["strJrrpsuc"], { strNickName, to_string(50 - jrrp) }));
 	}
 		else if (strLowerMessage.substr(intMsgCnt, 4) == "name")
@@ -3464,7 +3475,7 @@ namespace Dice
 				}
 			}
 		}
-		else if (0&&(strLowerMessage.substr(intMsgCnt, 3) == "log" | strLowerMessage.substr(intMsgCnt, 5) == "begin" | strLowerMessage.substr(intMsgCnt, 3) == "end" | (strLowerMessage.substr(intMsgCnt, 3) == "get" & strLowerMessage.substr(intMsgCnt, 7) != "getcard" & strLowerMessage.substr(intMsgCnt, 7) != "getbook")))
+		else if (strLowerMessage.substr(intMsgCnt, 3) == "log" | strLowerMessage.substr(intMsgCnt, 5) == "begin" | strLowerMessage.substr(intMsgCnt, 3) == "end" | (strLowerMessage.substr(intMsgCnt, 3) == "get" & strLowerMessage.substr(intMsgCnt, 7) != "getcard" & strLowerMessage.substr(intMsgCnt, 7) != "getbook"))
 		{
 			string Command;
 			if (strLowerMessage.substr(intMsgCnt, 3) == "log")
@@ -4881,7 +4892,12 @@ namespace Dice
 	}
 	void EventHandler::HandleGroupMemberIncreaseEvent(long long beingOperateQQ, long long fromGroup)
 	{
-
+		if (beingOperateQQ == getLoginQQ()&& BanListFG.findlistON(fromGroup)==3)
+		{
+			AddMsgToQueue(Dice::DiceMsg("本群没有经过申请，请加群" + getGroupList()[std::masterGroup] + "[" + to_string(std::masterGroup) + "]申请", fromGroup, beingOperateQQ, Dice::MsgType::Group));
+			AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]发现未记录的群" + getGroupList()[fromGroup] + "[" + to_string(fromGroup) + "]，已经添加到未审核群列表！", std::masterGroup, std::master, Dice::MsgType::Group));
+			UnsignedGroup.insert(fromGroup);
+		}
 		if (beingOperateQQ != getLoginQQ() && WelcomeMsg.count(fromGroup))
 		{
 			string strReply = WelcomeMsg[fromGroup];
@@ -4918,6 +4934,9 @@ namespace Dice
 		Enabled = false;
 		ilInitList.reset();
 		Name.reset();
+		BanListFG.blacklistFGsave(0);
+		BanListFP.blacklistFPsave(0);
+		UnsignedGroupsave(0);
 		ofstream ofstreamDisabledGroup(strFileLoc + "DisabledGroup.RDconf", ios::out | ios::trunc);
 		for (auto it = DisabledGroup.begin(); it != DisabledGroup.end(); ++it)
 		{
@@ -4944,6 +4963,20 @@ namespace Dice
 			ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
 		}
 		ofstreamUsingname.close();
+
+		ofstream ofstreamuseT(strFileLoc + "useT.RDconf", ios::out | ios::trunc);
+		for (auto it = useT.begin(); it != useT.end(); ++it)
+		{
+			ofstreamuseT << to_string(it->first) << to_string(it->second) << std::endl;
+		}
+		ofstreamuseT.close();
+
+		ofstream ofstreamTeamSaver(strFileLoc + "TeamSaver.RDconf", ios::out | ios::trunc);
+		for (auto it = TeamSaver.begin(); it != TeamSaver.end(); ++it)
+		{
+			ofstreamTeamSaver << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
+		}
+		ofstreamTeamSaver.close();
 
 		ofstream ofstreamClist(strFileLoc + "Clist.RDconf", ios::out | ios::trunc);
 		for (auto it = Clist.begin(); it != Clist.end(); ++it)
@@ -5081,6 +5114,9 @@ namespace Dice
 			return;
 		ilInitList.reset();
 		Name.reset();
+		BanListFG.blacklistFGsave(0);
+		BanListFP.blacklistFPsave(0);
+		UnsignedGroupsave(0);
 		ofstream ofstreamDisabledGroup(strFileLoc + "DisabledGroup.RDconf", ios::out | ios::trunc);
 		for (auto it = DisabledGroup.begin(); it != DisabledGroup.end(); ++it)
 		{
@@ -5123,6 +5159,13 @@ namespace Dice
 		}
 		ofstreams_Count.close();
 
+		ofstream ofstreamuseT(strFileLoc + "useT.RDconf", ios::out | ios::trunc);
+		for (auto it = useT.begin(); it != useT.end(); ++it)
+		{
+			ofstreamuseT << to_string(it->first) << to_string(it->second) << std::endl;
+		}
+		ofstreamuseT.close();
+
 		ofstream ofstreamDuellist(strFileLoc + "Duellist.RDconf", ios::out | ios::trunc);
 		for (auto it = Duellist.begin(); it != Duellist.end(); ++it)
 		{
@@ -5152,6 +5195,14 @@ namespace Dice
 			ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
 		}
 		ofstreamUsingname.close();
+
+
+		ofstream ofstreamTeamSaver(strFileLoc + "TeamSaver.RDconf", ios::out | ios::trunc);
+		for (auto it = TeamSaver.begin(); it != TeamSaver.end(); ++it)
+		{
+			ofstreamTeamSaver << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
+		}
+		ofstreamTeamSaver.close();
 
 		ofstream ofstreamDisabledHELPGroup(strFileLoc + "DisabledHELPGroup.RDconf", ios::in | ios::trunc);
 		for (auto it = DisabledHELPGroup.begin(); it != DisabledHELPGroup.end(); ++it)
@@ -5226,9 +5277,996 @@ namespace Dice
 		}
 		ofstreamWelcomeMsg.close();
 	}
-	/*void EventHandler::HandleAddGroupEvent()
+ 	void EventHandler::HandleAddGroupEvent(long long fromgroup, long long reQuestQQ,int type, const char* responseFlag)
 	{
-		AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]收到来自群", 812839433, master, Dice::MsgType::Group));
+		if (BanListFG.findlistON(fromgroup) == 4)
+		{
+			setGroupAddRequest(responseFlag, 2, 2, "因群在黑名单中，拒绝添加邀请");
+			AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]收到来自" + getStrangerInfo(reQuestQQ).nick + "[" + to_string(reQuestQQ) + "]的黑名单群" + getGroupList()[fromgroup] + "[" + to_string(fromgroup) + "]的邀请，已经自动拒绝！",std::masterGroup, std::master, Dice::MsgType::Group));
+			return;
+		}
+		else
+		{
+			setGroupAddRequest(responseFlag, 2, 1, "");
+			AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]收到来自" + getStrangerInfo(reQuestQQ).nick + "[" + to_string(reQuestQQ) + "]的群" + getGroupList()[fromgroup] + "[" + to_string(fromgroup) + "]的邀请，已经同意", std::masterGroup, std::master, Dice::MsgType::Group));
+			if (BanListFG.findlistON(fromgroup) == 2)
+			AddMsgToQueue(Dice::DiceMsg("本群是白名单群，无需再次申请", fromgroup, reQuestQQ, Dice::MsgType::Group));
+			return;
+		}
+	}
+	void EventHandler::HandleAddFriendEvent(long long reQuestQQ,const char* responseFlag)
+	{
+		setFriendAddRequest(responseFlag,1,"");
+		AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=master]收到来自" +to_string(reQuestQQ)+ "的好友添加请求，已经自动同意", std::masterGroup, std::master, Dice::MsgType::Group));
 		return;
-	}*/
+	}
+	void EventHandler::HandleMasterOder(DiceMsg dice_msg, bool& block_msg)
+	{
+		int intMsgCnt = 1;
+		while (isspace(static_cast<unsigned char>(dice_msg.msg[intMsgCnt])))intMsgCnt++;
+		block_msg = true;
+		string strLowerMessage = dice_msg.msg;
+		transform(strLowerMessage.begin(), strLowerMessage.end(), strLowerMessage.begin(), [](unsigned char c) { return tolower(c); });
+		if (strLowerMessage.substr(intMsgCnt, 4) == "pass" && BanListFP.findlistON(dice_msg.qq_id) <= 1)
+		{
+			intMsgCnt += 4;
+			string strGroupID;
+			long long groupID;
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+			{
+				strGroupID += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (strGroupID.empty())
+			{
+				dice_msg.Reply("请输入正确的格式呀！");
+				return;
+			}
+			else
+			{
+				groupID = stoll(strGroupID);
+				if (UnsignedGroup.count(groupID))
+				{
+					UnsignedGroup.erase(groupID);
+					BanListFG.insertList(groupID, 2, "由管理员" + getName(dice_msg.qq_id) + "[" + to_string(dice_msg.qq_id) + "]审核通过。");
+					dice_msg.Reply("成功添加新的白名单群，嘿嘿，又有调查员可以整了");
+					return;
+				}
+				else
+				{
+					dice_msg.Reply("该群不在未审核群列表中，是你手抖了吧~");
+					return;
+				}
+			}
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 2) == "do" && dice_msg.qq_id == std::master)
+		{
+			intMsgCnt += 2;
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			if (strLowerMessage.substr(intMsgCnt, 5) == "listg")
+			{
+				intMsgCnt += 5;
+				string strpage;
+				int page;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strpage += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strpage.empty())page = 1;
+				else page = stoi(strpage);
+				dice_msg.Reply(BanListFG.listlist(page));
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 5) == "listp")
+			{
+				intMsgCnt += 5;
+				string strpage;
+				int page;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strpage += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strpage.empty())page = 1;
+				else page = stoi(strpage);
+				dice_msg.Reply(BanListFP.listlist(page));
+				return;
+			}
+			if (strLowerMessage.substr(intMsgCnt, 6) == "listwg")
+			{
+				intMsgCnt += 6;
+				string strpage;
+				int page;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strpage += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strpage.empty())page = 1;
+				else page = stoi(strpage);
+				dice_msg.Reply(BanListFG.listlistw(page));
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 6) == "listwp")
+			{
+				intMsgCnt += 6;
+				string strpage;
+				int page;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strpage += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strpage.empty())page = 1;
+				else page = stoi(strpage);
+				dice_msg.Reply(BanListFP.listlistw(page));
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 7) == "allpass")
+			{
+				map<long long, string>cit = getGroupList();
+				for (auto it = cit.begin(); it != cit.end(); it++)
+				{
+					if (BanListFG.findlistON(it->first) == 3)
+						BanListFG.insertList(it->first, 2, "由master使用allpass命令通过");
+				}
+				dice_msg.Reply("*已经通过当前全部群*");
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 4) == "insp")
+			{
+				intMsgCnt += 4;
+				string strQQid;
+				long long intQQid;
+				int level;
+				string reason;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))intMsgCnt++;
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				{
+					intMsgCnt += 10;
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+					intMsgCnt += 1;
+				}
+				else
+				{
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+				}
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					level = int(strLowerMessage[intMsgCnt] - '0');
+					intMsgCnt++;
+				}
+				if (level < 1 || level>8)
+				{
+					dice_msg.Reply("请输入正确的格式呀！");
+					return;
+				}
+				while (intMsgCnt != strLowerMessage.length())
+				{
+					reason += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (reason.empty())reason = "由master手动添加";
+				BanListFP.insertList(intQQid, level, reason);
+				dice_msg.Reply("成功置" + to_string(intQQid) + "为" + to_string(level - 3) + "级黑名单\n理由为：" + reason);
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 4) == "insg")
+			{
+				intMsgCnt += 4;
+				string strGroupid;
+				long long intGroupid;
+				int level;
+				string reason;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strGroupid += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strGroupid.empty())
+				{
+					dice_msg.Reply("请输入正确的格式呀！");
+					return;
+				}
+				else intGroupid = stoll(strGroupid);
+
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					level = int(strLowerMessage[intMsgCnt] - '0');
+					intMsgCnt++;
+				}
+				if (level < 1 || level>6)
+				{
+					dice_msg.Reply("请输入正确的格式呀！");
+					return;
+				}
+				while (intMsgCnt != strLowerMessage.length())
+				{
+					reason += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (reason.empty())reason = "由master手动添加";
+				BanListFG.insertList(intGroupid, level, reason);
+				dice_msg.Reply("成功置群" + to_string(intGroupid) + "为" + to_string(level - 3) + "级黑名单群\n理由为：" + reason);
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 4) == "link")
+			{
+				intMsgCnt += 4;
+				if (strLowerMessage.substr(intMsgCnt, 3) == "off")
+				{
+					linkgroup = 3;
+					dice_msg.Reply("*复读机关闭了*");
+					return;
+				}
+				else
+				{
+					string strGroupid;
+					long long intGroupid;
+					while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+						intMsgCnt++;
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strGroupid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strGroupid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intGroupid = stoll(strGroupid);
+					linkgroup = intGroupid;
+					dice_msg.Reply("复读机启动中....");
+					return;
+				}
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 5) == "trust")
+			{
+				intMsgCnt += 5;
+				string strQQid;
+				long long intQQid;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				{
+					intMsgCnt += 10;
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+					intMsgCnt += 1;
+				}
+				else
+				{
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+				}
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				BanListFP.insertList(intQQid, 2, "由master手动添加");
+				dice_msg.Reply("成功添加一级白名单");
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 3) == "add")
+			{
+				intMsgCnt += 3;
+				string strQQid;
+				long long intQQid;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				if (strLowerMessage.substr(intMsgCnt, 10) == "[cq:at,qq=")
+				{
+					intMsgCnt += 10;
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+					intMsgCnt += 1;
+				}
+				else
+				{
+					while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					{
+						strQQid += strLowerMessage[intMsgCnt];
+						intMsgCnt++;
+					}
+					if (strQQid.empty())
+					{
+						dice_msg.Reply("请输入正确的格式呀！");
+						return;
+					}
+					else intQQid = stoll(strQQid);
+				}
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				BanListFP.insertList(intQQid, 1, "由master手动添加");
+				dice_msg.Reply("成功添加管理员");
+				return;
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 4) == "info")
+			{
+				string show = linkgroup == 3 ? "NULL" : to_string(linkgroup);
+				dice_msg.Reply("当前状态:\n总群数:" + to_string(getGroupList().size()) + "\nlink群:" + to_string(linkgroup));
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 3) == "set")
+			{
+				intMsgCnt += 3;
+				string strQQid;
+				long long intQQid;
+				while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+					intMsgCnt++;
+				while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				{
+					strQQid += strLowerMessage[intMsgCnt];
+					intMsgCnt++;
+				}
+				if (strQQid.empty())
+				{
+					masterGroup = dice_msg.group_id;
+					dice_msg.Reply("已将本群设置为审核群");
+					return;
+				}
+				else
+				{
+					intQQid = stoll(strQQid);
+					masterGroup = intQQid;
+					dice_msg.Reply("成功将" + to_string(intQQid) + "设置为审核群");
+					return;
+				}
+			}
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "save" && dice_msg.qq_id == std::master)
+		{
+			CString path1 = strFileLoc.c_str();
+			CString path2 = "\\temfile";
+			CString path = path1 + path2;
+			if (!PathIsDirectory(path)) {
+				::CreateDirectory(path, 0);
+			}
+			dice_msg.Reply("正在手动保存中，请稍候");
+			BanListFG.blacklistFGsave(1);
+			BanListFP.blacklistFPsave(1);
+			UnsignedGroupsave(1);
+			ofstream ofstreamDisabledGroup(strFileLoc + "temfile\\" + "DisabledGroup.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledGroup.begin(); it != DisabledGroup.end(); ++it)
+			{
+				ofstreamDisabledGroup << *it << std::endl;
+			}
+			ofstreamDisabledGroup.close();
+
+			ofstream ofstreamDisabledDiscuss(strFileLoc + "temfile\\" + "DisabledDiscuss.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledDiscuss.begin(); it != DisabledDiscuss.end(); ++it)
+			{
+				ofstreamDisabledDiscuss << *it << std::endl;
+			}
+			ofstreamDisabledDiscuss.close();
+			ofstream ofstreamDisabledJRRPGroup(strFileLoc + "temfile\\" + "DisabledJRRPGroup.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledJRRPGroup.begin(); it != DisabledJRRPGroup.end(); ++it)
+			{
+				ofstreamDisabledJRRPGroup << *it << std::endl;
+			}
+			ofstreamDisabledJRRPGroup.close();
+
+			ofstream ofstreamDisabledJRRPDiscuss(strFileLoc + "temfile\\" + "DisabledJRRPDiscuss.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledJRRPDiscuss.begin(); it != DisabledJRRPDiscuss.end(); ++it)
+			{
+				ofstreamDisabledJRRPDiscuss << *it << std::endl;
+			}
+			ofstreamDisabledJRRPDiscuss.close();
+
+			ofstream ofstreams_Count(strFileLoc + "\\temfile\\" + "s_Count.RDconf", ios::out | ios::trunc);
+			for (auto it = s_Count.begin(); it != s_Count.end(); ++it)
+			{
+				ofstreams_Count << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
+					<< it->second[1] << " "
+					<< it->second[2] << " "
+					<< it->second[3] << " "
+					<< it->second[4] << " "
+					<< it->second[5] << " "
+					<< it->second[6] << " "
+					<< it->second[7] << " "
+					<< it->second[8] << std::endl;
+			}
+			ofstreams_Count.close();
+
+
+			ofstream ofstreamClist(strFileLoc + "temfile\\" + "Clist.RDconf", ios::out | ios::trunc);
+			for (auto it = Clist.begin(); it != Clist.end(); ++it)
+			{
+				for (auto it1 = it->second.begin(); it1 != it->second.end(); ++it1)
+				{
+					for (auto it2 = it1->second.cbegin(); it2 != it1->second.cend(); ++it2)
+					{
+						ofstreamClist << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
+							<< it1->first << " " << it2->first << " " << it2->second << std::endl;
+					}
+				}
+			}
+			ofstreamClist.close();
+
+			ofstream ofstreamUsingname(strFileLoc + "temfile\\" + "Usingname.RDconf", ios::out | ios::trunc);
+			for (auto it = Usingname.begin(); it != Usingname.end(); ++it)
+			{
+				if (!it->second.empty())
+					ofstreamUsingname << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
+			}
+			ofstreamUsingname.close();
+
+			ofstream ofstreamTeamSaver(strFileLoc + "temfile\\" + "TeamSaver.RDconf", ios::out | ios::trunc);
+			for (auto it = TeamSaver.begin(); it != TeamSaver.end(); ++it)
+			{
+				ofstreamTeamSaver << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " " << it->second << std::endl;
+			}
+			ofstreamTeamSaver.close();
+
+			ofstream ofstreamDisabledHELPGroup(strFileLoc + "temfile\\" + "DisabledHELPGroup.RDconf", ios::in | ios::trunc);
+			for (auto it = DisabledHELPGroup.begin(); it != DisabledHELPGroup.end(); ++it)
+			{
+				ofstreamDisabledHELPGroup << *it << std::endl;
+			}
+			ofstreamDisabledHELPGroup.close();
+
+			ofstream ofstreamDisabledHELPDiscuss(strFileLoc + "temfile\\" + "DisabledHELPDiscuss.RDconf", ios::in | ios::trunc);
+			for (auto it = DisabledHELPDiscuss.begin(); it != DisabledHELPDiscuss.end(); ++it)
+			{
+				ofstreamDisabledHELPDiscuss << *it << std::endl;
+			}
+			ofstreamDisabledHELPDiscuss.close();
+
+			ofstream ofstreamDisabledOBGroup(strFileLoc + "temfile\\" + "DisabledOBGroup.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledOBGroup.begin(); it != DisabledOBGroup.end(); ++it)
+			{
+				ofstreamDisabledOBGroup << *it << std::endl;
+			}
+			ofstreamDisabledOBGroup.close();
+
+			ofstream ofstreamDisabledOBDiscuss(strFileLoc + "temfile\\" + "DisabledOBDiscuss.RDconf", ios::out | ios::trunc);
+			for (auto it = DisabledOBDiscuss.begin(); it != DisabledOBDiscuss.end(); ++it)
+			{
+				ofstreamDisabledOBDiscuss << *it << std::endl;
+			}
+			ofstreamDisabledOBDiscuss.close();
+
+			ofstream ofstreamObserveGroup(strFileLoc + "temfile\\" + "ObserveGroup.RDconf", ios::out | ios::trunc);
+			for (auto it = ObserveGroup.begin(); it != ObserveGroup.end(); ++it)
+			{
+				ofstreamObserveGroup << it->first << " " << it->second << std::endl;
+			}
+			ofstreamObserveGroup.close();
+
+			ofstream ofstreamObserveDiscuss(strFileLoc + "temfile\\" + "ObserveDiscuss.RDconf", ios::out | ios::trunc);
+			for (auto it = ObserveDiscuss.begin(); it != ObserveDiscuss.end(); ++it)
+			{
+				ofstreamObserveDiscuss << it->first << " " << it->second << std::endl;
+			}
+			ofstreamObserveDiscuss.close();
+			ofstream ofstreamCharacterProp(strFileLoc + "temfile\\" + "CharacterProp.RDconf", ios::out | ios::trunc);
+			for (auto it = CharacterProp.begin(); it != CharacterProp.end(); ++it)
+			{
+				for (auto it1 = it->second.cbegin(); it1 != it->second.cend(); ++it1)
+				{
+					ofstreamCharacterProp << it->first.QQ << " " << it->first.Type << " " << it->first.GrouporDiscussID << " "
+						<< it1->first << " " << it1->second << std::endl;
+				}
+			}
+			ofstreamCharacterProp.close();
+			ofstream ofstreamDefault(strFileLoc + "temfile\\" + "Default.RDconf", ios::out | ios::trunc);
+			for (auto it = DefaultDice.begin(); it != DefaultDice.end(); ++it)
+			{
+				ofstreamDefault << it->first << " " << it->second << std::endl;
+			}
+			ofstreamDefault.close();
+
+			ofstream ofstreamWelcomeMsg(strFileLoc + "temfile\\" + "WelcomeMsg.RDconf", ios::out | ios::trunc);
+			for (auto it = WelcomeMsg.begin(); it != WelcomeMsg.end(); ++it)
+			{
+				while (it->second.find(' ') != string::npos)
+					it->second.replace(it->second.find(' '), 1, "{space}");
+				while (it->second.find('\t') != string::npos)
+					it->second.replace(it->second.find('\t'), 1, "{tab}");
+				while (it->second.find('\n') != string::npos)
+					it->second.replace(it->second.find('\n'), 1, "{endl}");
+				while (it->second.find('\r') != string::npos)
+					it->second.replace(it->second.find('\r'), 1, "{enter}");
+				ofstreamWelcomeMsg << it->first << " " << it->second << std::endl;
+			}
+			ofstreamWelcomeMsg.close();
+			dice_msg.Reply("手动保存成功啦！");
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "load" && dice_msg.qq_id == std::master && dice_msg.msg_type == Dice::MsgType::Private)
+		{
+			dice_msg.Reply("正在读取数据中，请稍候....");
+			TeamSaver.clear();
+			DefaultDice.clear();
+			DisabledGroup.clear();
+			DisabledDiscuss.clear();
+			DisabledJRRPGroup.clear();
+			DisabledJRRPDiscuss.clear();
+			DisabledOBGroup.clear();
+			DisabledOBDiscuss.clear();
+			ObserveGroup.clear();
+			ObserveDiscuss.clear();
+			s_Count.clear();
+			Clist.clear();
+			UnsignedGroup.clear();
+			BanListFG.blacklistFGload(1);
+			BanListFP.blacklistFPload(1);
+			UnsignedGroupload(1);
+			ifstream ifstreamCharacterProp(strFileLoc + "temfile\\" + "CharacterProp.RDconf");
+			if (ifstreamCharacterProp)
+			{
+				long long QQ, GrouporDiscussID;
+				int Type, Value;
+				string SkillName;
+				while (ifstreamCharacterProp >> QQ >> Type >> GrouporDiscussID >> SkillName >> Value)
+				{
+					CharacterProp[SourceType(QQ, Type, GrouporDiscussID)][SkillName] = Value;
+				}
+			}
+			ifstreamCharacterProp.close();
+
+			ifstream ifstreams_Count(strFileLoc + "temfile\\" + "s_Count.RDconf");
+			if (ifstreams_Count)
+			{
+				long long QQ, GrouporDiscussID;
+				int Type, Value1, Value2, Value3, Value4, Value5, Value6, Value7, Value8;
+				while (ifstreams_Count >> QQ >> Type >> GrouporDiscussID >> Value1 >> Value2 >> Value3 >> Value4 >> Value5 >> Value6 >> Value7 >> Value8)
+				{
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][1] = Value1;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][2] = Value2;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][3] = Value3;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][4] = Value4;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][5] = Value5;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][6] = Value6;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][7] = Value7;
+					s_Count[SourceType(QQ, Type, GrouporDiscussID)][8] = Value8;
+				}
+			}
+			ifstreams_Count.close();
+
+			ifstream ifstreamTeamSaver(strFileLoc + "temfile\\" + "TeamSaver.RDconf");
+			if (ifstreamTeamSaver)
+			{
+				long long QQ, GrouporDiscussID;
+				int Type;
+				long long pl;
+				while (ifstreamTeamSaver >> QQ >> Type >> GrouporDiscussID >> pl)
+				{
+					TeamSaver.insert({ SourceType(QQ, Type, GrouporDiscussID),pl });
+				}
+			}
+			ifstreamTeamSaver.close();
+
+			ifstream ifstreamClist(strFileLoc + "temfile\\" + "Clist.RDconf");
+			if (ifstreamClist)
+			{
+				long long QQ, GrouporDiscussID;
+				int Type, Value;
+				string Skillname, StoCname;
+				while (ifstreamClist >> QQ >> Type >> GrouporDiscussID >> StoCname >> Skillname >> Value)
+				{
+					PropType proptype1;
+					Listcon listcon1;
+					proptype1[Skillname] = Value;
+					listcon1[StoCname] = proptype1;
+					const auto range = Clist.equal_range(SourceType(QQ, Type, GrouporDiscussID));
+					multimap<SourceType, Listcon>::iterator Cfinder1 = range.first;
+					map<string, PropType>::iterator finder2;
+					bool judge = 1;
+					for (; Cfinder1 != range.second;)
+					{
+						finder2 = Cfinder1->second.begin();
+						if (finder2->first == StoCname)
+						{
+							finder2->second[Skillname] = Value;
+							judge = 0;
+							break;
+						}
+						if (++Cfinder1 == Clist.end())break;
+					}
+					if (judge)Clist.insert(make_pair(SourceType(QQ, Type, GrouporDiscussID), listcon1));
+					listcon1.clear(); proptype1.clear();
+				}
+			}
+			ifstreamClist.close();
+
+			ifstream ifstreamUsingname(strFileLoc + "temfile\\" + "Usingname.RDconf");
+			if (ifstreamUsingname)
+			{
+				long long QQ, GrouporDiscussID;
+				int Type;
+				string usingname1;
+				while (ifstreamUsingname >> QQ >> Type >> GrouporDiscussID >> usingname1)
+				{
+					Usingname[SourceType(QQ, Type, GrouporDiscussID)] = usingname1;
+				}
+			}
+			ifstreamUsingname.close();
+
+			ifstream ifstreamDisabledGroup(strFileLoc + "temfile\\" + "DisabledGroup.RDconf");
+			if (ifstreamDisabledGroup)
+			{
+				long long Group;
+				while (ifstreamDisabledGroup >> Group)
+				{
+					DisabledGroup.insert(Group);
+				}
+			}
+			ifstreamDisabledGroup.close();
+			ifstream ifstreamDisabledDiscuss(strFileLoc + "temfile\\" + "DisabledDiscuss.RDconf");
+			if (ifstreamDisabledDiscuss)
+			{
+				long long Discuss;
+				while (ifstreamDisabledDiscuss >> Discuss)
+				{
+					DisabledDiscuss.insert(Discuss);
+				}
+			}
+			ifstreamDisabledDiscuss.close();
+			ifstream ifstreamDisabledJRRPGroup(strFileLoc + "temfile\\" + "DisabledJRRPGroup.RDconf");
+			if (ifstreamDisabledJRRPGroup)
+			{
+				long long Group;
+				while (ifstreamDisabledJRRPGroup >> Group)
+				{
+					DisabledJRRPGroup.insert(Group);
+				}
+			}
+			ifstreamDisabledJRRPGroup.close();
+			ifstream ifstreamDisabledJRRPDiscuss(strFileLoc + "temfile\\" + "DisabledJRRPDiscuss.RDconf");
+			if (ifstreamDisabledJRRPDiscuss)
+			{
+				long long Discuss;
+				while (ifstreamDisabledJRRPDiscuss >> Discuss)
+				{
+					DisabledJRRPDiscuss.insert(Discuss);
+				}
+			}
+			ifstreamDisabledJRRPDiscuss.close();
+			ifstream ifstreamDisabledHELPGroup(strFileLoc + "temfile\\" + "DisabledHELPGroup.RDconf");
+			if (ifstreamDisabledHELPGroup)
+			{
+				long long Group;
+				while (ifstreamDisabledHELPGroup >> Group)
+				{
+					DisabledHELPGroup.insert(Group);
+				}
+			}
+			ifstreamDisabledHELPGroup.close();
+			ifstream ifstreamDisabledHELPDiscuss(strFileLoc + "temfile\\" + "DisabledHELPDiscuss.RDconf");
+			if (ifstreamDisabledHELPDiscuss)
+			{
+				long long Discuss;
+				while (ifstreamDisabledHELPDiscuss >> Discuss)
+				{
+					DisabledHELPDiscuss.insert(Discuss);
+				}
+			}
+			ifstreamDisabledHELPDiscuss.close();
+			ifstream ifstreamDisabledOBGroup(strFileLoc + "temfile\\" + "DisabledOBGroup.RDconf");
+			if (ifstreamDisabledOBGroup)
+			{
+				long long Group;
+				while (ifstreamDisabledOBGroup >> Group)
+				{
+					DisabledOBGroup.insert(Group);
+				}
+			}
+			ifstreamDisabledOBGroup.close();
+			ifstream ifstreamDisabledOBDiscuss(strFileLoc + "temfile\\" + "DisabledOBDiscuss.RDconf");
+			if (ifstreamDisabledOBDiscuss)
+			{
+				long long Discuss;
+				while (ifstreamDisabledOBDiscuss >> Discuss)
+				{
+					DisabledOBDiscuss.insert(Discuss);
+				}
+			}
+			ifstreamDisabledOBDiscuss.close();
+			ifstream ifstreamObserveGroup(strFileLoc + "temfile\\" + "ObserveGroup.RDconf");
+			if (ifstreamObserveGroup)
+			{
+				long long Group, QQ;
+				while (ifstreamObserveGroup >> Group >> QQ)
+				{
+					ObserveGroup.insert(make_pair(Group, QQ));
+				}
+			}
+			ifstreamObserveGroup.close();
+
+			ifstream ifstreamObserveDiscuss(strFileLoc + "temfile\\" + "ObserveDiscuss.RDconf");
+			if (ifstreamObserveDiscuss)
+			{
+				long long Discuss, QQ;
+				while (ifstreamObserveDiscuss >> Discuss >> QQ)
+				{
+					ObserveDiscuss.insert(make_pair(Discuss, QQ));
+				}
+			}
+			ifstreamObserveDiscuss.close();
+			ifstream ifstreamDefault(strFileLoc + "temfile\\" + "Default.RDconf");
+			if (ifstreamDefault)
+			{
+				long long QQ;
+				int DefVal;
+				while (ifstreamDefault >> QQ >> DefVal)
+				{
+					DefaultDice[QQ] = DefVal;
+				}
+			}
+			ifstreamDefault.close();
+			ifstream ifstreamWelcomeMsg(strFileLoc + "temfile\\" + "WelcomeMsg.RDconf");
+			if (ifstreamWelcomeMsg)
+			{
+				long long GroupID;
+				string Msg;
+				while (ifstreamWelcomeMsg >> GroupID >> Msg)
+				{
+					while (Msg.find("{space}") != string::npos)
+						Msg.replace(Msg.find("{space}"), 7, " ");
+					while (Msg.find("{tab}") != string::npos)
+						Msg.replace(Msg.find("{tab}"), 5, "\t");
+					while (Msg.find("{endl}") != string::npos)
+						Msg.replace(Msg.find("{endl}"), 6, "\n");
+					while (Msg.find("{enter}") != string::npos)
+						Msg.replace(Msg.find("{enter}"), 7, "\r");
+					WelcomeMsg[GroupID] = Msg;
+				}
+			}
+			ifstreamWelcomeMsg.close();
+			ilInitList = make_unique<Initlist>(strFileLoc + "temfile\\" + "INIT.DiceDB");
+			ifstream ifstreamCustomMsg(strFileLoc + "temfile\\" + "CustomMsg.json");
+			if (ifstreamCustomMsg)
+			{
+				ReadCustomMsg(ifstreamCustomMsg);
+			}
+			ifstreamCustomMsg.close();
+			dice_msg.Reply("读取成功，已经载入临时保存的数据");
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "list" && BanListFP.findlistON(dice_msg.qq_id) <= 1)
+		{
+			intMsgCnt += 4;
+			if (strLowerMessage.substr(intMsgCnt, 3) == "clr")
+			{
+				for (auto it = UnsignedGroup.begin(); it != UnsignedGroup.end(); ++it)
+				{
+					if (BanListFG.findlistON(*it) == 3)
+					{
+						setGroupLeave(*it, false);
+						AddMsgToQueue(Dice::DiceMsg("由于未审核，即将退群....", *it, std::master, Dice::MsgType::Group));
+					}
+				}
+				UnsignedGroup.clear();
+				dice_msg.Reply("*已经退出全部未审核群*");
+			}
+			else if (strLowerMessage.substr(intMsgCnt, 4) == "pass")
+			{
+				for (auto it = UnsignedGroup.begin(); it != UnsignedGroup.end(); ++it)
+				{
+					BanListFG.insertList(*it, 2, "由管理员" + to_string(dice_msg.qq_id) + "批量通过");
+				}
+				dice_msg.Reply("*已经通过全部未审核群*");
+				UnsignedGroup.clear();
+			}
+			string reply = "以下是未审核群:";
+			for (auto it = UnsignedGroup.begin(); it != UnsignedGroup.end(); ++it)
+			{
+				reply += "\n" + to_string(*it);
+			}
+			dice_msg.Reply(reply);
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 3) == "get" && BanListFP.findlistON(dice_msg.qq_id) <= 2)
+		{
+			BanListFG.insertList(dice_msg.group_id, 2, "由白名单成员" + to_string(dice_msg.qq_id) + "自助通过");
+			dice_msg.Reply("成功置本群于白名单");
+			AddMsgToQueue(Dice::DiceMsg("[CQ:at,qq=" + to_string(std::master) + "]白名单成员" + to_string(dice_msg.qq_id) + "自助通过了群" + to_string(dice_msg.group_id) + "的审核", std::masterGroup, std::master, Dice::MsgType::Group));
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 4) == "info" && BanListFP.findlistON(dice_msg.qq_id) <= 2)
+		{
+			intMsgCnt += 4;
+			string strQQid;
+			long long intQQid;
+			string reason;
+			bool person = 1;
+			while (strLowerMessage[intMsgCnt] == 'p' || strLowerMessage[intMsgCnt] == 'g')
+			{
+				if (strLowerMessage[intMsgCnt] == 'g')person = 0;
+				intMsgCnt++;
+			}
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+			{
+				strQQid += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (strQQid.empty())
+			{
+				dice_msg.Reply("请输入正确的格式呀！");
+				return;
+			}
+			else intQQid = stoll(strQQid);
+			if (person)
+			{
+				Banlist::DataReturn* Dmsg = BanListFP.getListData(intQQid);
+				if (!Dmsg)
+					dice_msg.Reply("查无此人~~");
+				else
+					dice_msg.Reply("黑名单等级：" + to_string(Dmsg->level) + "\n操作原因：" + Dmsg->reason);
+			}
+			else
+			{
+				Banlist::DataReturn* Dmsg = BanListFG.getListData(intQQid);
+				if (!Dmsg)
+					dice_msg.Reply("查无此群~~");
+				else
+					dice_msg.Reply("黑名单等级：" + to_string(Dmsg->level) + "\n操作原因：" + Dmsg->reason);
+			}
+			return;
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 3) == "ban" && BanListFP.findlistON(dice_msg.qq_id) <= 1)
+		{
+			intMsgCnt += 3;
+			string strQQid;
+			long long intQQid;
+			string reason;
+			bool person = 1;
+			while (strLowerMessage[intMsgCnt] == 'p' || strLowerMessage[intMsgCnt] == 'g')
+			{
+				if (strLowerMessage[intMsgCnt] == 'g')person = 0;
+				intMsgCnt++;
+			}
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+			{
+				strQQid += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (strQQid.empty())
+			{
+				dice_msg.Reply("请输入正确的格式呀！");
+				return;
+			}
+			else intQQid = stoll(strQQid);
+
+			while (intMsgCnt != strLowerMessage.length())
+			{
+				reason += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (reason.empty())reason = "由master手动添加";
+			if (person && intQQid != std::master)
+				BanListFP.insertList(intQQid, 5, reason);
+			else if (intQQid != std::master)
+				BanListFG.insertList(intQQid, 4, reason);
+			dice_msg.Reply("拉黑操作成功");
+			return;
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 3) == "era" && BanListFP.findlistON(dice_msg.qq_id) <= 1)
+		{
+			intMsgCnt += 3;
+			string strQQid;
+			long long intQQid;
+			bool person = 1;
+			while (strLowerMessage[intMsgCnt] == 'p' || strLowerMessage[intMsgCnt] == 'g')
+			{
+				if (strLowerMessage[intMsgCnt] == 'g')person = 0;
+				intMsgCnt++;
+			}
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+			{
+				strQQid += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (strQQid.empty())
+			{
+				dice_msg.Reply("请输入正确的格式呀！");
+				return;
+			}
+			else intQQid = stoll(strQQid);
+			if (person && intQQid != std::master)
+				BanListFP.eraList(intQQid);
+			else if (intQQid != std::master)
+				BanListFG.eraList(intQQid);
+			dice_msg.Reply("洗白操作成功");
+			return;
+		}
+		else if (strLowerMessage.substr(intMsgCnt, 5) == "leave")
+		{
+			intMsgCnt += 5;
+			string strQQid;
+			long long intQQid;
+			string reason;
+			bool person = 1;
+			while (isspace(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+				intMsgCnt++;
+			while (isdigit(static_cast<unsigned char>(strLowerMessage[intMsgCnt])))
+			{
+				strQQid += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (strQQid.empty())
+			{
+				dice_msg.Reply("请输入正确的格式呀！");
+				return;
+			}
+			else intQQid = stoll(strQQid);
+
+			while (intMsgCnt != strLowerMessage.length())
+			{
+				reason += strLowerMessage[intMsgCnt];
+				intMsgCnt++;
+			}
+			if (reason.empty())reason = "因为不可名状的原因正在退群...原因可能包括未审核，非跑团群，或长期未使用";
+			dice_msg.Reply("已经成功退群");
+			AddMsgToQueue(Dice::DiceMsg(reason, intQQid, std::master, Dice::MsgType::Group));
+			setGroupLeave(intQQid, false);
+			return;
+		}
+	}
 }

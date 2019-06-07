@@ -242,6 +242,9 @@
     <ClInclude Include="RD.h">
       <Filter>源文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\sqlite3.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="CQP.lib">
